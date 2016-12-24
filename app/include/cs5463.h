@@ -8,6 +8,11 @@
 #ifndef APP_INCLUDE_CS5463_H_
 #define APP_INCLUDE_CS5463_H_
 
+typedef enum{
+	CS5463_CMD_RD_CONFIG = 0,
+	CS5463_CMD_SYNC_1 = 0xFF
+}CS5463_CMD_t;
+
 void CS5463_Manager(void *pvParameters);
 double CS5463_dGetCurrent(void);
 
