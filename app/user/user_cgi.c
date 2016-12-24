@@ -34,6 +34,9 @@
 
 #include "user_cgi.h"
 
+#include "cs5463.h"
+#include "smart_socket_global.h"
+
 /******************************************************************************/
 typedef struct _scaninfo {
     STAILQ_HEAD(, bss_info) *pbss;
@@ -115,7 +118,7 @@ system_info_get(cJSON *pcjson, const char* pname )
     cJSON_AddStringToObject(pSubJson_Version,"iot_version",buff);
     
 
-    cJSON_AddStringToObject(pSubJson_Device,"manufacture","Espressif Systems");
+    cJSON_AddStringToObject(pSubJson_Device,"manufacture","Ming zhi hai mei qi hao");
 #if SENSOR_DEVICE
 #if HUMITURE_SUB_DEVICE
     cJSON_AddStringToObject(pSubJson_Device,"product", "Humiture");
@@ -124,7 +127,7 @@ system_info_get(cJSON *pcjson, const char* pname )
 #endif
 #endif
 #if PLUG_DEVICE
-    cJSON_AddStringToObject(pSubJson_Device,"product", "Plug");
+    cJSON_AddStringToObject(pSubJson_Device,"product", "Smart Socket");
 #endif
 #if LIGHT_DEVICE
     cJSON_AddStringToObject(pSubJson_Device,"product", "Light");
@@ -148,15 +151,16 @@ system_info_get(cJSON *pcjson, const char* pname )
 LOCAL int
 current_value_get(cJSON *pcjson, const char* pname )
 {
-
     cJSON * pSubJson_response = cJSON_CreateObject();
+
+    printf("Get current from cs5463.\n");
     if(NULL == pSubJson_response){
         printf("pSubJson_response creat fail\n");
         return -1;
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", user_cs5463_get_current_d());
+    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_dGetCurrent());
     cJSON_AddStringToObject(pSubJson_response, "unit", "A");
     return 0;
 }
@@ -180,7 +184,7 @@ switch_status_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
     
-    cJSON_AddNumberToObject(pSubJson_response, "status", user_plug_get_status());
+    cJSON_AddNumberToObject(pSubJson_response, "status", RELAY_GET_STATE());	//user_plug_get_status());
 
     return 0;
 }
@@ -209,7 +213,12 @@ switch_status_set(const char *pValue)
     
     if(NULL != pJsonSub_status){
         if(pJsonSub_status->type == cJSON_Number){
-            user_plug_set_status(pJsonSub_status->valueint);
+        	if (RELAY_CLOSE_VALUE == pJsonSub_status->valueint){
+        		RELAY_CLOSE();
+        	}else if(RELAY_OPEN_VALUE == pJsonSub_status->valueint){
+        		RELAY_OPEN();
+        	}
+            //user_plug_set_status(pJsonSub_status->valueint);
             if(NULL != pJson)cJSON_Delete(pJson);
             return 0;
         }
@@ -967,8 +976,8 @@ typedef struct {
 
 const EspCgiApiEnt espCgiApiNodes[]={
 #if PLUG_DEVICE
-    {"config", "switch", switch_status_get,switch_status_set},
-	{"config", "current", current_value_get,NULL},
+    {"config", "switch", switch_status_get, switch_status_set},
+	{"client", "current", current_value_get,NULL},
 #elif LIGHT_DEVICE
     {"config", "light", light_status_get,light_status_set},
 #endif
@@ -1032,7 +1041,7 @@ int   cgiEspApi(HttpdConnData *connData) {
             
         } else {
             //Found, req is using GET
-        
+        	printf("GET command %s:%s found.\n", espCgiApiNodes[i].file, espCgiApiNodes[i].cmd);
             //printf("get cmd found %s\n",espCgiApiNodes[i].cmd);
             pcjson=cJSON_CreateObject();
             if(NULL == pcjson) {

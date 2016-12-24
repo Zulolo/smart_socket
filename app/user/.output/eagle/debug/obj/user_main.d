@@ -92,7 +92,10 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/netdb.h \
  ../include/user_config.h ../include/user_devicefind.h \
  ../include/user_webserver.h ../include/user_config.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/json/cJSON.h \
- ../include/user_iot_version.h ../include/user_esp_platform.h \
- ../include/led.h ../include/smart_config.h
+ ../include/user_esp_platform.h ../libesphttpd/espfs/espfsformat.h \
+ ../libesphttpd/include/espfs.h ../libesphttpd/include/captdns.h \
+ ../libesphttpd/include/httpd.h ../libesphttpd/include/cgiwifi.h \
+ ../libesphttpd/include/httpd.h ../libesphttpd/include/httpdespfs.h \
+ ../include/user_cgi.h ../libesphttpd/include/webpages-espfs.h \
+ ../include/led.h ../include/cs5463.h ../include/smart_socket_global.h \
+ ../include/driver/gpio.h ../include/smart_config.h

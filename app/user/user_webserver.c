@@ -1477,7 +1477,7 @@ webserver_recvdata_process(struct single_conn_param *psingle_conn_param, char *p
                     }else if (strcmp(pURL_Frame->pFilename, "status") == 0) {
                         json_send(psingle_conn_param, CONNECT_STATUS);
                         
-                    } else if (strcmp(pURL_Frame->pFilename, "scan") == 0) {
+                    }else if (strcmp(pURL_Frame->pFilename, "scan") == 0) {
                         char *pstrstr = NULL;
                         pstrstr = (char *)strstr(pusrdata, "&");
 

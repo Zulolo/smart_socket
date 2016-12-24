@@ -56,6 +56,8 @@ unsigned int default_private_key_len = 0;
 #endif
 
 #include "led.h"
+#include "cs5463.h"
+#include "smart_socket_global.h"
 #include "smart_config.h"
 
 #if HTTPD_SERVER
@@ -122,6 +124,30 @@ uint32 user_rf_cal_sector_set(void)
     return rf_cal_sec;
 }
 
+void ledTask(void)
+{
+	printf("LED manager start.\n");
+	xTaskCreate(LED_Manager, "led_manager", 256, NULL, 2, NULL);
+}
+
+void cs5463Task(void)
+{
+	printf("CS5463 manager start.\n");
+	xTaskCreate(CS5463_Manager, "cs5463_manager", 256, NULL, 2, NULL);
+}
+
+void relayInit(void)
+{
+	GPIO_ConfigTypeDef io_out_conf;
+
+	printf("Configure relay pin.\n");
+	io_out_conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	io_out_conf.GPIO_Mode = GPIO_Mode_Output;
+	io_out_conf.GPIO_Pin = RELAY_IO_PIN ;
+	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&io_out_conf);
+	RELAY_OPEN();
+}
 /******************************************************************************
  * FunctionName : user_init
  * Description  : entry of user application, init user function here
@@ -134,9 +160,11 @@ void user_init(void)
 
     printf("SDK version:%s,%u\n", system_get_sdk_version(),__LINE__ );
 
-	printf("LED blink test task start.\n");
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
-	xTaskCreate(led_blink, "led_blink", 256, NULL, 2, NULL);
+    relayInit();
+
+    ledTask();
+
+    cs5463Task();
 
     /* need to set opmode before you set config */
 	printf("Set opmode to STATION_MODE before invoke smartconfig_task.\n");

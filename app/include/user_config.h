@@ -6,8 +6,8 @@
 #define LEWEI_PLATFORM          0
 
 /*support one server at the same project*/
-#define HTTPD_SERVER            0
-#define WEB_SERVICE             1
+#define HTTPD_SERVER            1
+#define WEB_SERVICE             0
 
 /*support one device at the same project*/
 #define PLUG_DEVICE             1

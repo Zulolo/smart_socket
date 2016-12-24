@@ -8,6 +8,6 @@
 #ifndef APP_INCLUDE_LED_H_
 #define APP_INCLUDE_LED_H_
 
-void led_blink(void *pvParameters);
+void LED_Manager(void *pvParameters);
 
 #endif /* APP_INCLUDE_LED_H_ */
