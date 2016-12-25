@@ -198,41 +198,41 @@ void user_init(void)
 
     relayInit();
 
-    ledTask();
+//    ledTask();
 
     cs5463Task();
 
     /* need to set opmode before you set config */
 	printf("Set opmode to STATION_MODE before invoke smartconfig_task.\n");
     wifi_set_opmode(STATIONAP_MODE);
-//
-//#if ESP_PLATFORM
-//    /*Initialization of the peripheral drivers*/
-//    /*For light demo , it is user_light_init();*/
-//    /* Also check whether assigned ip addr by the router.If so, connect to ESP-server  */
-//    user_esp_platform_init();
-//#endif
-//
-//    /*Establish a udp socket to receive local device detect info.*/
-//    /*Listen to the port 1025, as well as udp broadcast.
-//    /*If receive a string of device_find_request, it rely its IP address and MAC.*/
-//    user_devicefind_start();
-//
-//#if WEB_SERVICE
-//    /*Establish a TCP server for http(with JSON) POST or GET command to communicate with the device.*/
-//    /*You can find the command in "2B-SDK-Espressif IoT Demo.pdf" to see the details.*/
-//    user_webserver_start();
-//
-//#elif HTTPD_SERVER
-//	/*Initialize DNS server for captive portal*/
-//	captdnsInit();
-//
-//	/*Initialize espfs containing static webpages*/
-//    espFsInit((void*)(webpages_espfs_start));
-//
-//	/*Initialize webserver*/
-//	httpdInit(builtInUrls, 80);
-//#endif
+
+#if ESP_PLATFORM
+    /*Initialization of the peripheral drivers*/
+    /*For light demo , it is user_light_init();*/
+    /* Also check whether assigned ip addr by the router.If so, connect to ESP-server  */
+    user_esp_platform_init();
+#endif
+
+    /*Establish a udp socket to receive local device detect info.*/
+    /*Listen to the port 1025, as well as udp broadcast.
+    /*If receive a string of device_find_request, it rely its IP address and MAC.*/
+    user_devicefind_start();
+
+#if WEB_SERVICE
+    /*Establish a TCP server for http(with JSON) POST or GET command to communicate with the device.*/
+    /*You can find the command in "2B-SDK-Espressif IoT Demo.pdf" to see the details.*/
+    user_webserver_start();
+
+#elif HTTPD_SERVER
+	/*Initialize DNS server for captive portal*/
+	captdnsInit();
+
+	/*Initialize espfs containing static webpages*/
+    espFsInit((void*)(webpages_espfs_start));
+
+	/*Initialize webserver*/
+	httpdInit(builtInUrls, 80);
+#endif
 
 }
 

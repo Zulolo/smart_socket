@@ -11,6 +11,7 @@
 
 void LED_Manager(void *pvParameters)
 {
+	uint16 unADC_Value;
 	GPIO_ConfigTypeDef tIO_OutConf;
 	tIO_OutConf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
 	tIO_OutConf.GPIO_Mode = GPIO_Mode_Output;
@@ -27,6 +28,9 @@ void LED_Manager(void *pvParameters)
 		// Delay and LED off
 		vTaskDelay(500/portTICK_RATE_MS);
 		GPIO_OUTPUT_SET(LED_1_PIN_NUM, 0);
+
+		unADC_Value = system_adc_read();
+		printf("ADC value is %u.\n", unADC_Value);
 	}
 }
 

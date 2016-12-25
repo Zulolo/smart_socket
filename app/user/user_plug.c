@@ -14,8 +14,8 @@
 #include "user_plug.h"
 
 LOCAL struct plug_saved_param plug_param;
-LOCAL struct keys_param keys;
-LOCAL struct single_key_param *single_key[PLUG_KEY_NUM];
+//LOCAL struct keys_param keys;
+//LOCAL struct single_key_param *single_key[PLUG_KEY_NUM];
 LOCAL os_timer_t link_led_timer;
 LOCAL uint8 link_led_level = 0;
 
@@ -178,7 +178,7 @@ user_link_led_output(uint8 mode)
 BOOL  
 user_get_key_status(void)
 {
-    return get_key_status(single_key[0]);
+    return ((system_adc_read() > 10) ? (1):(0));//get_key_status(single_key[0]);
 }
 
 /******************************************************************************
@@ -196,13 +196,13 @@ user_plug_init(void)
 
     wifi_status_led_install(PLUG_WIFI_LED_IO_NUM, PLUG_WIFI_LED_IO_MUX, PLUG_WIFI_LED_IO_FUNC);
 
-    single_key[0] = key_init_single(PLUG_KEY_0_IO_NUM, PLUG_KEY_0_IO_MUX, PLUG_KEY_0_IO_FUNC,
-                                    user_plug_long_press, user_plug_short_press);
-
-    keys.key_num = PLUG_KEY_NUM;
-    keys.single_key = single_key;
-
-    key_init(&keys);
+//    single_key[0] = key_init_single(PLUG_KEY_0_IO_NUM, PLUG_KEY_0_IO_MUX, PLUG_KEY_0_IO_FUNC,
+//                                    user_plug_long_press, user_plug_short_press);
+//
+//    keys.key_num = PLUG_KEY_NUM;
+//    keys.single_key = single_key;
+//
+//    key_init(&keys);
 
     spi_flash_read((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
                 (uint32 *)&plug_param, sizeof(struct plug_saved_param));

@@ -6,9 +6,9 @@
 #endif
 
 
-/* NOTICE---this is for 512KB spi flash.
+/* NOTICE---this is for 4096KB spi flash with 1024+3072.
  * you can change to other sector if you use other size spi flash. */
-#define ESP_PARAM_START_SEC     0x7D
+#define ESP_PARAM_START_SEC     253	//0x7D
 
 #define packet_size   (2 * 1024)
 
