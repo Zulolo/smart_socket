@@ -23,6 +23,9 @@
 #include "esp8266/eagle_soc.h"
 #include "esp8266/ets_sys.h"
 #include "esp_libc.h"
+//#include "esp_common.h"
+//#include "driver/gpio.h"
+//#include "cs5463.h"
 //*****************************************************************************
 //
 // Make sure all of the definitions in this header have a C binding.
@@ -211,7 +214,9 @@ int ICACHE_FLASH_ATTR SPIMasterSendData(SpiNum spiNum, SpiData* pInData)
         return -1;
     }
     uint32_t *value = pInData->data;
+
     while (READ_PERI_REG(SPI_CMD(spiNum))&SPI_USR);
+//    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U,FUNC_HSPID_MOSI);
     // Set command by user.
     if (pInData->cmdLen != 0) {
         // Max command length 16 bits.
@@ -281,7 +286,10 @@ int ICACHE_FLASH_ATTR SPIMasterRecvData(SpiNum spiNum, SpiData* pOutData)
     }
 
     uint32_t *value = pOutData->data;
+
     while (READ_PERI_REG(SPI_CMD(spiNum))&SPI_USR);
+//    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U,FUNC_GPIO13);
+//    GPIO_OUTPUT_SET(CS5463_MOSI_PIN_NUM, 1);
     // Set command by user.
     if (pOutData->cmdLen != 0) {
         // Max command length 16 bits.
@@ -317,11 +325,21 @@ int ICACHE_FLASH_ATTR SPIMasterRecvData(SpiNum spiNum, SpiData* pOutData)
         if (NULL == value) {
             return -1;
         }
+
         // Clear MOSI enable
-        CLEAR_PERI_REG_MASK(SPI_USER(spiNum), SPI_USR_MOSI);
+        //CLEAR_PERI_REG_MASK(SPI_USER(spiNum), SPI_USR_MOSI);
+        SET_PERI_REG_MASK(SPI_USER(spiNum), SPI_USR_MOSI);
         // Enable MOSI
         SET_PERI_REG_MASK(SPI_USER(spiNum), SPI_USR_MISO);
+
+        // Load send buffer
+        idx = 0;
+        do {
+            WRITE_PERI_REG((SPI_W0(spiNum) + (idx << 2)), *value++);
+        } while (++idx < (pOutData->dataLen / 4));
+
         // Set data send buffer length.Max data length 64 bytes.
+        SET_PERI_REG_BITS(SPI_USER1(spiNum), SPI_USR_MOSI_BITLEN, ((pOutData->dataLen << 3) - 1), SPI_USR_MOSI_BITLEN_S);
         SET_PERI_REG_BITS(SPI_USER1(spiNum), SPI_USR_MISO_BITLEN, ((pOutData->dataLen << 3) - 1), SPI_USR_MISO_BITLEN_S);
     } else {
         CLEAR_PERI_REG_MASK(SPI_USER(spiNum), SPI_USR_MOSI);
@@ -334,6 +352,7 @@ int ICACHE_FLASH_ATTR SPIMasterRecvData(SpiNum spiNum, SpiData* pOutData)
 
     while (READ_PERI_REG(SPI_CMD(spiNum))&SPI_USR);
     // Read data out
+    idx = 0;
     do {
         *pOutData->data++ = READ_PERI_REG(SPI_W0(spiNum) + (idx << 2));
     } while (++idx < (pOutData->dataLen / 4));

@@ -85,4 +85,4 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/pwm.h \
  ../include/driver/gpio.h ../include/driver/spi_register.h \
  ../include/driver/spi_interface.h ../include/driver/spi_register.h \
- ../include/cs5463.h
+ ../include/cs5463.h ../include/driver/gpio.h

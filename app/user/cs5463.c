@@ -12,52 +12,158 @@
 
 #define CS5463_RST_IO_PIN		GPIO_Pin_5
 #define CS5463_RST_PIN_NUM		5
+#define CS5463_MISO_IO_PIN		GPIO_Pin_12
+#define CS5463_MISO_PIN_NUM		12
+#define CS5463_MOSI_IO_PIN		GPIO_Pin_13
+#define CS5463_MOSI_PIN_NUM		13
+#define CS5463_CLK_IO_PIN		GPIO_Pin_14
+#define CS5463_CLK_PIN_NUM		14
+// GPIO16 is the CS, but the GPIO 16 related  API is seperated
+#define CS5463_SELECT()			gpio16_output_set(0)
+#define CS5463_DESELECT()		gpio16_output_set(1)
+
+#define CS5463_RW_REG_CMD_BITS	0xC0
+#define CS5463_RD_REG_CMD		0x00
+#define CS5463_WR_REG_CMD		0x40
+
+void writeCS5463SPI(uint8_t unCmd)
+{
+	int8_t nBitIndex;
+	for (nBitIndex = 7; nBitIndex >= 0; nBitIndex--){
+		GPIO_OUTPUT_SET(CS5463_CLK_PIN_NUM, 0);
+		GPIO_OUTPUT_SET(CS5463_MOSI_PIN_NUM, (unCmd >> nBitIndex) & 0x01);
+		GPIO_OUTPUT_SET(CS5463_CLK_PIN_NUM, 1);
+	}
+}
+
+void readCS5463SPI(uint8_t* pDataBuff, uint8_t unDataLen)
+{
+	int8_t nBitIndex;
+	int8_t nByteIndex;
+	for (nByteIndex = 0; nByteIndex < unDataLen; nByteIndex++){
+		*(pDataBuff + nByteIndex) = 0;
+		for (nBitIndex = 7; nBitIndex >= 0; nBitIndex--){
+			GPIO_OUTPUT_SET(CS5463_CLK_PIN_NUM, 0);
+			GPIO_OUTPUT_SET(CS5463_CLK_PIN_NUM, 1);
+			*(pDataBuff + nByteIndex) |= (GPIO_INPUT_GET(CS5463_MISO_PIN_NUM) << nBitIndex);
+		}
+	}
+}
+
+int32_t CS5463IF_WriteCmd(uint8_t unWriteCmd)
+{
+	CS5463_SELECT();
+	writeCS5463SPI(unWriteCmd);
+//	writeCS5463SPI(CS5463_CMD_SYNC_1);
+//	writeCS5463SPI(CS5463_CMD_SYNC_1);
+//	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	CS5463_DESELECT();
+	return 0;
+}
+
+int32_t CS5463IF_WriteReg(uint8_t unWriteCmd, uint8_t* pWriteDataBuff, uint8_t unWriteDataLen)
+{
+	int8_t nRegIndex;
+	if ((unWriteDataLen != 3) && (unWriteDataLen != 4)){
+		printf("CS5463 read data length error.\n");
+		return (-1);
+	}
+
+	if ((unWriteCmd & CS5463_RW_REG_CMD_BITS) != CS5463_WR_REG_CMD){
+		printf("It is not write register type command.\n");
+		return (-1);
+	}
+
+	CS5463_SELECT();
+	writeCS5463SPI(unWriteCmd);
+	for (nRegIndex = 0; nRegIndex < unWriteDataLen; nRegIndex++){
+		writeCS5463SPI(pWriteDataBuff[nRegIndex]);
+	}
+	CS5463_DESELECT();
+
+	return 0;
+}
+
+int32_t CS5463IF_Read(uint8_t unReadCmd, uint8_t* pReadDataBuff, uint8_t unReadDataLen)
+{
+	int8_t nBitIndex;
+	int8_t nByteIndex;
+
+	if ((unReadDataLen != 3) && (unReadDataLen != 4)){
+		printf("CS5463 read data length error.\n");
+		return (-1);
+	}
+
+	if ((unReadCmd & CS5463_RW_REG_CMD_BITS) != CS5463_RD_REG_CMD){
+		printf("It is not read register type command.\n");
+		return (-1);
+	}
+
+	CS5463_SELECT();
+	writeCS5463SPI(unReadCmd);
+	GPIO_OUTPUT_SET(CS5463_MOSI_PIN_NUM, 1);
+	readCS5463SPI(pReadDataBuff, unReadDataLen);
+	CS5463_DESELECT();
+
+	return 0;
+}
+
+void CS5463IF_Init()
+{
+	GPIO_ConfigTypeDef tGPIO_Conf;
+
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14);
+
+	tGPIO_Conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	tGPIO_Conf.GPIO_Mode = GPIO_Mode_Output;
+	tGPIO_Conf.GPIO_Pin = CS5463_RST_IO_PIN ;
+	tGPIO_Conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&tGPIO_Conf);
+
+	tGPIO_Conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	tGPIO_Conf.GPIO_Mode = GPIO_Mode_Output;
+	tGPIO_Conf.GPIO_Pin = CS5463_MOSI_IO_PIN ;
+	tGPIO_Conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&tGPIO_Conf);
+
+	tGPIO_Conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	tGPIO_Conf.GPIO_Mode = GPIO_Mode_Output;
+	tGPIO_Conf.GPIO_Pin = CS5463_CLK_IO_PIN ;
+	tGPIO_Conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&tGPIO_Conf);
+
+	tGPIO_Conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	tGPIO_Conf.GPIO_Mode = GPIO_Mode_Input;
+	tGPIO_Conf.GPIO_Pin = CS5463_MISO_IO_PIN ;
+	tGPIO_Conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&tGPIO_Conf);
+
+	gpio16_output_conf();
+	CS5463_DESELECT();
+}
 
 void CS5463_Manager(void *pvParameters)
 {
 	SpiData tSPI_Dat;
 	SpiAttr tAttr;   //Set as Master/Sub mode 0 and speed 2MHz
 	GPIO_ConfigTypeDef tIO_OutConf;
-	uint32_t unCS5463ReadDummyData;	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
+	uint8_t unCS5463ReadData[3];	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
+	uint8_t unCS5463ReadCmd;
 
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,FUNC_HSPIQ_MISO);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,FUNC_HSPI_CS0);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U,FUNC_HSPID_MOSI);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U,FUNC_HSPI_CLK);
-
-	tAttr.mode=SpiMode_Master;
-	tAttr.subMode=SpiSubMode_0;
-	tAttr.speed=SpiSpeed_2MHz;
-	tAttr.bitOrder=SpiBitOrder_MSBFirst;
-	SPIInit(SpiNum_HSPI,&tAttr);
-
-	tIO_OutConf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
-	tIO_OutConf.GPIO_Mode = GPIO_Mode_Output;
-	tIO_OutConf.GPIO_Pin = CS5463_RST_IO_PIN ;
-	tIO_OutConf.GPIO_Pullup = GPIO_PullUp_DIS;
-	gpio_config(&tIO_OutConf);
-
-	gpio16_output_conf();
-	gpio16_output_set(1);
+	CS5463IF_Init();
 
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 0);
 	vTaskDelay(200/portTICK_RATE_MS);
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 1);
 	vTaskDelay(200/portTICK_RATE_MS);
 
-	tSPI_Dat.cmd = CS5463_CMD_RD_CONFIG;			 ///< Command value
-	tSPI_Dat.cmdLen = 1;		   ///< Command byte length
-	tSPI_Dat.addr = NULL; 		 ///< Point to address value
-	tSPI_Dat.addrLen = 0; 	   ///< Address byte length
-	tSPI_Dat.data = &unCS5463ReadDummyData; 		 ///< Point to data buffer
-	tSPI_Dat.dataLen = 3; 	   ///< Data byte length.
-
+	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 	while(1){
-		gpio16_output_set(0);
-		memset(&unCS5463ReadDummyData, CS5463_CMD_SYNC_1, sizeof(unCS5463ReadDummyData));
-		SPIMasterRecvData(SpiNum_HSPI, &tSPI_Dat);
-		gpio16_output_set(1);
-		printf("Data received from CS5463 is %X.\n", unCS5463ReadDummyData);
+		CS5463IF_Read(CS5463_CMD_RD_CONFIG, unCS5463ReadData, sizeof(unCS5463ReadData));
+		printf("Data received from CS5463 is 0x%02X, 0x%02X, 0x%02X.\n",
+				unCS5463ReadData[0], unCS5463ReadData[1], unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
 	}
 }

@@ -96,4 +96,4 @@
  ../include/driver/key.h ../include/driver/gpio.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/upgrade.h \
  ../include/user_cgi.h ../libesphttpd/include/httpd.h ../include/cs5463.h \
- ../include/smart_socket_global.h ../include/driver/gpio.h
+ ../include/driver/gpio.h ../include/smart_socket_global.h
