@@ -13,6 +13,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
@@ -80,6 +81,8 @@ HttpdBuiltInUrl builtInUrls[]={
 };
 #endif
 
+extern xSemaphoreHandle xSmartSocketEventListSemaphore;
+extern SmartSocketEventList_t tSmartSocketEventList;
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
  * Description  : SDK just reversed 4 sectors, used for rf init data and paramters.
@@ -148,6 +151,37 @@ void relayInit(void)
 	gpio_config(&io_out_conf);
 	RELAY_OPEN();
 }
+
+int32_t systemInit(void)
+{
+	vSemaphoreCreateBinary(xSmartSocketEventListSemaphore);
+
+	if(NULL == xSmartSocketEventListSemaphore){
+		printf("Create event list semaphore failed.\n");
+		return (-1);
+	}
+
+    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
+        if (system_param_load(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY), 0,
+        		&tSmartSocketEventList, sizeof(tSmartSocketEventList)) != true){
+        	xSemaphoreGive(xSmartSocketEventListSemaphore);
+    		printf("Load initial event list data failed.\n");
+    		return (-1);
+        }
+
+        if (tSmartSocketEventList.unValidation != 0xA5A5A5A5){
+        	memset(&tSmartSocketEventList, 0, sizeof(tSmartSocketEventList));
+        	tSmartSocketEventList.unValidation = 0xA5A5A5A5;
+        	system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY),
+        			&tSmartSocketEventList, sizeof(tSmartSocketEventList));
+        }
+        xSemaphoreGive(xSmartSocketEventListSemaphore);
+    }else{
+		printf("Take event list semaphore failed.\n");
+		return (-1);
+    }
+	return 0;
+}
 /******************************************************************************
  * FunctionName : user_init
  * Description  : entry of user application, init user function here
@@ -160,6 +194,8 @@ void user_init(void)
 
     printf("SDK version:%s,%u\n", system_get_sdk_version(),__LINE__ );
 
+    systemInit();
+
     relayInit();
 
     ledTask();
@@ -169,7 +205,7 @@ void user_init(void)
     /* need to set opmode before you set config */
 	printf("Set opmode to STATION_MODE before invoke smartconfig_task.\n");
     wifi_set_opmode(STATIONAP_MODE);
-    
+//
 //#if ESP_PLATFORM
 //    /*Initialization of the peripheral drivers*/
 //    /*For light demo , it is user_light_init();*/

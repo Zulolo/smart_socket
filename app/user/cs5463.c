@@ -9,6 +9,7 @@
 #include "driver/spi_register.h"
 #include "driver/spi_interface.h"
 #include "cs5463.h"
+#include "user_data.h"
 
 #define CS5463_RST_IO_PIN		GPIO_Pin_5
 #define CS5463_RST_PIN_NUM		5
@@ -26,12 +27,15 @@
 #define CS5463_RD_REG_CMD		0x00
 #define CS5463_WR_REG_CMD		0x40
 
+int8_t nCS5463_Temperature;
+
 void writeCS5463SPI(uint8_t unCmd)
 {
 	int8_t nBitIndex;
+
 	for (nBitIndex = 7; nBitIndex >= 0; nBitIndex--){
 		GPIO_OUTPUT_SET(CS5463_CLK_PIN_NUM, 0);
-		GPIO_OUTPUT_SET(CS5463_MOSI_PIN_NUM, (unCmd >> nBitIndex) & 0x01);
+		GPIO_OUTPUT_SET(CS5463_MOSI_PIN_NUM, ((unCmd >> nBitIndex) & 0x01));
 		GPIO_OUTPUT_SET(CS5463_CLK_PIN_NUM, 1);
 	}
 }
@@ -146,24 +150,22 @@ void CS5463IF_Init()
 
 void CS5463_Manager(void *pvParameters)
 {
-	SpiData tSPI_Dat;
-	SpiAttr tAttr;   //Set as Master/Sub mode 0 and speed 2MHz
-	GPIO_ConfigTypeDef tIO_OutConf;
 	uint8_t unCS5463ReadData[3];	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
-	uint8_t unCS5463ReadCmd;
 
 	CS5463IF_Init();
 
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 0);
-	vTaskDelay(200/portTICK_RATE_MS);
+	vTaskDelay(500/portTICK_RATE_MS);
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 1);
-	vTaskDelay(200/portTICK_RATE_MS);
+	vTaskDelay(500/portTICK_RATE_MS);
 
 	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 	while(1){
-		CS5463IF_Read(CS5463_CMD_RD_CONFIG, unCS5463ReadData, sizeof(unCS5463ReadData));
-		printf("Data received from CS5463 is 0x%02X, 0x%02X, 0x%02X.\n",
-				unCS5463ReadData[0], unCS5463ReadData[1], unCS5463ReadData[2]);
+		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463ReadData, sizeof(unCS5463ReadData));
+		nCS5463_Temperature = (int8_t)(unCS5463ReadData[0]);
+		if (unCS5463ReadData[0] > 28){
+
+		}
 		vTaskDelay(200/portTICK_RATE_MS);
 	}
 }

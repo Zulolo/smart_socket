@@ -83,6 +83,8 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/smartconfig.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/spi_flash.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/pwm.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sockets.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/ipv4/lwip/inet.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/ipv6/lwip/inet6.h \

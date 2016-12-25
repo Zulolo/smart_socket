@@ -49,6 +49,8 @@ typedef struct _scaninfo {
 LOCAL scaninfo *pscaninfo;
 extern u16 scannum;
 
+extern int8_t nCS5463_Temperature;
+
 LOCAL os_timer_t *restart_xms;
 LOCAL rst_parm *rstparm;
 LOCAL struct station_config *sta_conf;
@@ -162,6 +164,32 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_dGetCurrent());
     cJSON_AddStringToObject(pSubJson_response, "unit", "A");
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : temperature_value_get
+ * Description  : set up temperature value as a JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{
+"temperature":24,
+"unit":"C"}}
+*******************************************************************************/
+LOCAL int
+temperature_value_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+
+    printf("Get current from cs5463.\n");
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response creat fail\n");
+        return -1;
+    }
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "temperature", nCS5463_Temperature);
+    cJSON_AddStringToObject(pSubJson_response, "unit", "C");
     return 0;
 }
 
@@ -978,6 +1006,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
 #if PLUG_DEVICE
     {"config", "switch", switch_status_get, switch_status_set},
 	{"client", "current", current_value_get,NULL},
+	{"client", "temperature", temperature_value_get,NULL},
 #elif LIGHT_DEVICE
     {"config", "light", light_status_get,light_status_set},
 #endif

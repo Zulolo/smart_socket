@@ -1,5 +1,9 @@
 #  copyright (c) 2010 Espressif System
 #
+
+#######################################
+### Actually this link file will not be used!!
+## The real using link file if the one in $SDK_PATH path
 ifndef PDIR
 
 endif
@@ -21,7 +25,7 @@ else
 endif
 
 BOOT?=new
-APP?=0
+APP?=1
 SPI_SPEED?=40
 SPI_MODE?=QIO
 SPI_SIZE_MAP?=6

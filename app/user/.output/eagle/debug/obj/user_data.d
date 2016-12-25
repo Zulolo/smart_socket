@@ -1,4 +1,4 @@
-.output/eagle/debug/obj/cs5463.o .output/eagle/debug/obj/cs5463.d : cs5463.c \
+.output/eagle/debug/obj/user_data.o .output/eagle/debug/obj/user_data.d : user_data.c \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/esp_common.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/c_types.h \
  /home/zulolo/crosstool-NG/builds/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/4.8.5/include/stdint.h \
@@ -83,7 +83,6 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/smartconfig.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/spi_flash.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/pwm.h \
- ../include/driver/gpio.h ../include/driver/spi_register.h \
- ../include/driver/spi_interface.h ../include/driver/spi_register.h \
- ../include/cs5463.h ../include/driver/gpio.h ../include/user_data.h \
- ../include/smart_socket_global.h
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
+ ../include/smart_socket_global.h ../include/driver/gpio.h
