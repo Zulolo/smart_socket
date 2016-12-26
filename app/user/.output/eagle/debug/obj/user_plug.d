@@ -84,4 +84,5 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/spi_flash.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/pwm.h \
  ../include/user_config.h ../include/user_plug.h ../include/driver/key.h \
+ ../include/driver/gpio.h ../include/smart_socket_global.h \
  ../include/driver/gpio.h

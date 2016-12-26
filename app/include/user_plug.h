@@ -23,9 +23,6 @@
 #define PLUG_LINK_LED_IO_NUM     4
 #define PLUG_LINK_LED_IO_FUNC    FUNC_GPIO4
 
-#define PLUG_RELAY_LED_IO_MUX     PERIPHS_IO_MUX_GPIO0_U
-#define PLUG_RELAY_LED_IO_NUM     0
-#define PLUG_RELAY_LED_IO_FUNC    FUNC_GPIO0
 
 #define PLUG_STATUS_OUTPUT(pin, on)     GPIO_OUTPUT_SET(pin, on)
 
@@ -37,10 +34,10 @@ enum {
     LED_20HZ,
 };
 
-struct plug_saved_param {
-    uint8_t status;
-    uint8_t pad[3];
-};
+//struct plug_saved_param {
+//    uint8_t status;
+//    uint8_t pad[3];
+//};
 
 void user_plug_init(void);
 uint8 user_plug_get_status(void);

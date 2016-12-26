@@ -12,8 +12,9 @@
 #include "user_config.h"
 #if PLUG_DEVICE
 #include "user_plug.h"
+#include "smart_socket_global.h"
 
-LOCAL struct plug_saved_param plug_param;
+//LOCAL struct plug_saved_param plug_param;
 //LOCAL struct keys_param keys;
 //LOCAL struct single_key_param *single_key[PLUG_KEY_NUM];
 LOCAL os_timer_t link_led_timer;
@@ -28,7 +29,7 @@ LOCAL uint8 link_led_level = 0;
 uint8  
 user_plug_get_status(void)
 {
-    return plug_param.status;
+    return RELAY_GET_STATE();
 }
 
 /******************************************************************************
@@ -40,57 +41,62 @@ user_plug_get_status(void)
 void  
 user_plug_set_status(bool status)
 {
-    if (status != plug_param.status) {
-        if (status > 1) {
-            printf("error status input!\n");
-            return;
-        }
-        printf("status input! %d\n", status);
+	if (status > 1) {
+		printf("error status input!\n");
+		return;
+	}
+	printf("status input! %d\n", status);
 
-        plug_param.status = status;
-        PLUG_STATUS_OUTPUT(PLUG_RELAY_LED_IO_NUM, status);
-    }
+	if (RELAY_CLOSE_VALUE == status){
+		RELAY_CLOSE();
+		RELAY_LED_ON();
+		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
+	}else if(RELAY_OPEN_VALUE == status){
+		RELAY_OPEN();
+		RELAY_LED_OFF();
+		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
+	}
 }
 
-/******************************************************************************
- * FunctionName : user_plug_short_press
- * Description  : key's short press function, needed to be installed
- * Parameters   : none
- * Returns      : none
-*******************************************************************************/
-LOCAL void  
-user_plug_short_press(void)
-{
-    user_plug_set_status((~plug_param.status) & 0x01);
-    spi_flash_erase_sector(PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE);
-    spi_flash_write((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
-                (uint32 *)&plug_param, sizeof(struct plug_saved_param));
-}
-
-/******************************************************************************
- * FunctionName : user_plug_long_press
- * Description  : key's long press function, needed to be installed
- * Parameters   : none
- * Returns      : none
-*******************************************************************************/
-LOCAL void  
-user_plug_long_press(void)
-{
-    int boot_flag=12345;
-    user_esp_platform_set_active(0);
-    system_restore();
-    
-    system_rtc_mem_write(70, &boot_flag, sizeof(boot_flag));
-    printf("long_press boot_flag %d  \n",boot_flag);
-    system_rtc_mem_read(70, &boot_flag, sizeof(boot_flag));
-    printf("long_press boot_flag %d  \n",boot_flag);
-
-#if RESTORE_KEEP_TIMER
-    user_platform_timer_bkup();
-#endif 
-
-    system_restart();
-}
+///******************************************************************************
+// * FunctionName : user_plug_short_press
+// * Description  : key's short press function, needed to be installed
+// * Parameters   : none
+// * Returns      : none
+//*******************************************************************************/
+//LOCAL void
+//user_plug_short_press(void)
+//{
+//    user_plug_set_status((~plug_param.status) & 0x01);
+//    spi_flash_erase_sector(PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE);
+//    spi_flash_write((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
+//                (uint32 *)&plug_param, sizeof(struct plug_saved_param));
+//}
+//
+///******************************************************************************
+// * FunctionName : user_plug_long_press
+// * Description  : key's long press function, needed to be installed
+// * Parameters   : none
+// * Returns      : none
+//*******************************************************************************/
+//LOCAL void
+//user_plug_long_press(void)
+//{
+//    int boot_flag=12345;
+//    user_esp_platform_set_active(0);
+//    system_restore();
+//
+//    system_rtc_mem_write(70, &boot_flag, sizeof(boot_flag));
+//    printf("long_press boot_flag %d  \n",boot_flag);
+//    system_rtc_mem_read(70, &boot_flag, sizeof(boot_flag));
+//    printf("long_press boot_flag %d  \n",boot_flag);
+//
+//#if RESTORE_KEEP_TIMER
+//    user_platform_timer_bkup();
+//#endif
+//
+//    system_restart();
+//}
 
 /******************************************************************************
  * FunctionName : user_link_led_init
@@ -181,6 +187,28 @@ user_get_key_status(void)
     return ((system_adc_read() > 10) ? (1):(0));//get_key_status(single_key[0]);
 }
 
+void relayInit(void)
+{
+	GPIO_ConfigTypeDef io_out_conf;
+
+	printf("Configure relay pin.\n");
+	PIN_FUNC_SELECT(RELAY_IO_MUX, RELAY_IO_FUNC);
+	io_out_conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	io_out_conf.GPIO_Mode = GPIO_Mode_Output;
+	io_out_conf.GPIO_Pin = RELAY_IO_PIN ;
+	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&io_out_conf);
+	RELAY_OPEN();
+
+	PIN_FUNC_SELECT(RELAY_LED_IO_MUX, RELAY_LED_IO_FUNC);
+	io_out_conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	io_out_conf.GPIO_Mode = GPIO_Mode_Output;
+	io_out_conf.GPIO_Pin = RELAY_LED_IO_PIN ;
+	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&io_out_conf);
+	RELAY_LED_OFF();
+}
+
 /******************************************************************************
  * FunctionName : user_plug_init
  * Description  : init plug's key function and relay output
@@ -204,17 +232,18 @@ user_plug_init(void)
 //
 //    key_init(&keys);
 
-    spi_flash_read((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
-                (uint32 *)&plug_param, sizeof(struct plug_saved_param));
+//    // relay open/close setting saved in flash and loaded at start up
+//	  // Not safe, now at start up just always relay open
+//    spi_flash_read((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
+//                (uint32 *)&plug_param, sizeof(struct plug_saved_param));
 
-    PIN_FUNC_SELECT(PLUG_RELAY_LED_IO_MUX, PLUG_RELAY_LED_IO_FUNC);
+    relayInit();
 
     // default to be off, for safety.
-    if (plug_param.status == 0xff) {
-        plug_param.status = 0;
-    }
+//    if (plug_param.status == 0xff) {
+//        plug_param.status = 0;
+//    }
 
-    PLUG_STATUS_OUTPUT(PLUG_RELAY_LED_IO_NUM, plug_param.status);
 }
 #endif
 

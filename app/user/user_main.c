@@ -139,19 +139,6 @@ void cs5463Task(void)
 	xTaskCreate(CS5463_Manager, "cs5463_manager", 256, NULL, 2, NULL);
 }
 
-void relayInit(void)
-{
-	GPIO_ConfigTypeDef io_out_conf;
-
-	printf("Configure relay pin.\n");
-	io_out_conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
-	io_out_conf.GPIO_Mode = GPIO_Mode_Output;
-	io_out_conf.GPIO_Pin = RELAY_IO_PIN ;
-	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
-	gpio_config(&io_out_conf);
-	RELAY_OPEN();
-}
-
 int32_t systemInit(void)
 {
 	vSemaphoreCreateBinary(xSmartSocketEventListSemaphore);
@@ -196,15 +183,11 @@ void user_init(void)
 
     systemInit();
 
-    relayInit();
-
-//    ledTask();
-
     cs5463Task();
 
     /* need to set opmode before you set config */
-	printf("Set opmode to STATION_MODE before invoke smartconfig_task.\n");
-    wifi_set_opmode(STATIONAP_MODE);
+//	printf("Set opmode to STATION_MODE before invoke smartconfig_task.\n");
+//    wifi_set_opmode(STATIONAP_MODE);
 
 #if ESP_PLATFORM
     /*Initialization of the peripheral drivers*/

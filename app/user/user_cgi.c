@@ -36,6 +36,7 @@
 
 #include "cs5463.h"
 #include "smart_socket_global.h"
+#include "user_data.h"
 
 /******************************************************************************/
 typedef struct _scaninfo {
@@ -160,6 +161,7 @@ current_value_get(cJSON *pcjson, const char* pname )
         printf("pSubJson_response creat fail\n");
         return -1;
     }
+
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
     cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_dGetCurrent());
@@ -181,7 +183,7 @@ temperature_value_get(cJSON *pcjson, const char* pname )
 {
     cJSON * pSubJson_response = cJSON_CreateObject();
 
-    printf("Get current from cs5463.\n");
+    printf("Get temperature from cs5463.\n");
     if(NULL == pSubJson_response){
         printf("pSubJson_response creat fail\n");
         return -1;
@@ -190,6 +192,36 @@ temperature_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddNumberToObject(pSubJson_response, "temperature", nCS5463_Temperature);
     cJSON_AddStringToObject(pSubJson_response, "unit", "C");
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : event_history_get
+ * Description  : set up event history as a JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"event":{"time":145879,
+"type":3,
+"data":1}}
+*******************************************************************************/
+LOCAL int
+event_history_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJsonEvent = cJSON_CreateObject();
+    SmartSocketEvent_t tEvent;
+
+    printf("Get event history.\n");
+    if(NULL == pSubJsonEvent){
+        printf("pSubJsonEvent creat fail\n");
+        return -1;
+    }
+    cJSON_AddItemToObject(pcjson, "event", pSubJsonEvent);
+    tEvent = URDT_nGetEventHistory(0);
+    if (SMART_SOCKET_EVENT_INVALID != tEvent.tEventType){
+        cJSON_AddNumberToObject(pSubJsonEvent, "time", tEvent.unTime);
+        cJSON_AddNumberToObject(pSubJsonEvent, "type", tEvent.tEventType);
+        cJSON_AddNumberToObject(pSubJsonEvent, "data", tEvent.data);
+    }
     return 0;
 }
 
@@ -204,7 +236,6 @@ temperature_value_get(cJSON *pcjson, const char* pname )
 LOCAL int  
 switch_status_get(cJSON *pcjson, const char* pname )
 {
-
     cJSON * pSubJson_response = cJSON_CreateObject();
     if(NULL == pSubJson_response){
         printf("pSubJson_response creat fail\n");
@@ -212,7 +243,7 @@ switch_status_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
     
-    cJSON_AddNumberToObject(pSubJson_response, "status", RELAY_GET_STATE());	//user_plug_get_status());
+    cJSON_AddNumberToObject(pSubJson_response, "status", user_plug_get_status());
 
     return 0;
 }
@@ -231,6 +262,7 @@ switch_status_set(const char *pValue)
     cJSON * pJsonSub_status=NULL;
     
     cJSON * pJson =  cJSON_Parse(pValue);
+
     if(NULL != pJson){
         pJsonSub = cJSON_GetObjectItem(pJson, "response");
     }
@@ -241,12 +273,14 @@ switch_status_set(const char *pValue)
     
     if(NULL != pJsonSub_status){
         if(pJsonSub_status->type == cJSON_Number){
-        	if (RELAY_CLOSE_VALUE == pJsonSub_status->valueint){
-        		RELAY_CLOSE();
-        	}else if(RELAY_OPEN_VALUE == pJsonSub_status->valueint){
-        		RELAY_OPEN();
-        	}
-            //user_plug_set_status(pJsonSub_status->valueint);
+//        	if (RELAY_CLOSE_VALUE == pJsonSub_status->valueint){
+//        		RELAY_CLOSE();
+//        		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
+//        	}else if(RELAY_OPEN_VALUE == pJsonSub_status->valueint){
+//        		RELAY_OPEN();
+//        		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
+//        	}
+            user_plug_set_status(pJsonSub_status->valueint);
             if(NULL != pJson)cJSON_Delete(pJson);
             return 0;
         }
@@ -1007,6 +1041,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
     {"config", "switch", switch_status_get, switch_status_set},
 	{"client", "current", current_value_get,NULL},
 	{"client", "temperature", temperature_value_get,NULL},
+	{"client", "event", event_history_get,NULL},
 #elif LIGHT_DEVICE
     {"config", "light", light_status_get,light_status_set},
 #endif
