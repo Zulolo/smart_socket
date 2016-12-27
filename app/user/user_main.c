@@ -56,10 +56,10 @@ unsigned int default_private_key_len = 0;
 #endif
 #endif
 
-#include "led.h"
 #include "cs5463.h"
 #include "smart_socket_global.h"
 #include "smart_config.h"
+#include "user_plug.h"
 
 #if HTTPD_SERVER
 HttpdBuiltInUrl builtInUrls[]={
@@ -127,12 +127,6 @@ uint32 user_rf_cal_sector_set(void)
     return rf_cal_sec;
 }
 
-void ledTask(void)
-{
-	printf("LED manager start.\n");
-	xTaskCreate(LED_Manager, "led_manager", 256, NULL, 2, NULL);
-}
-
 void cs5463Task(void)
 {
 	printf("CS5463 manager start.\n");
@@ -180,6 +174,7 @@ void user_init(void)
 	printf("Smart plug daemon start.\n");
 
     printf("SDK version:%s,%u\n", system_get_sdk_version(),__LINE__ );
+    user_link_led_output(LED_20HZ);
 
     systemInit();
 

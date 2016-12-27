@@ -99,5 +99,7 @@
  ../libesphttpd/include/httpd.h ../libesphttpd/include/cgiwifi.h \
  ../libesphttpd/include/httpd.h ../libesphttpd/include/httpdespfs.h \
  ../include/user_cgi.h ../libesphttpd/include/webpages-espfs.h \
- ../include/led.h ../include/cs5463.h ../include/driver/gpio.h \
- ../include/smart_socket_global.h ../include/smart_config.h
+ ../include/cs5463.h ../include/driver/gpio.h \
+ ../include/smart_socket_global.h ../include/smart_config.h \
+ ../include/user_plug.h ../include/driver/key.h ../include/driver/gpio.h \
+ ../include/smart_socket_global.h

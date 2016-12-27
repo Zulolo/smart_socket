@@ -14,9 +14,32 @@
 #include "user_plug.h"
 #include "smart_socket_global.h"
 
+/* NOTICE---this is for 4096KB spi flash with 1024+3072.
+ * you can change to other sector if you use other size spi flash. */
+#define PRIV_PARAM_START_SEC        252	//0x7C
+
+#define PRIV_PARAM_SAVE     0
+
+#define PLUG_USER_KEY_NUM      1
+
+#define PLUG_WIFI_LED_IO_MUX	PERIPHS_IO_MUX_MTDO_U
+#define PLUG_WIFI_LED_PIN_NUM	15
+#define PLUG_WIFI_LED_IO_FUNC	FUNC_GPIO15
+
+#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO4_U
+#define PLUG_LINK_LED_PIN_NUM	4
+#define PLUG_LINK_LED_IO_PIN  	GPIO_Pin_4
+#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO4
+
+#define PLUG_USR_KEY_IO_MUX		PERIPHS_IO_MUX_MTDO_U
+#define PLUG_USR_KEY_PIN_NUM	15
+#define PLUG_USR_KEY_IO_PIN  	GPIO_Pin_15
+#define PLUG_USR_KEY_IO_FUNC	FUNC_GPIO15
+
+
 //LOCAL struct plug_saved_param plug_param;
-//LOCAL struct keys_param keys;
-//LOCAL struct single_key_param *single_key[PLUG_KEY_NUM];
+LOCAL struct keys_param keys;
+LOCAL struct single_key_param *user_key[PLUG_USER_KEY_NUM];
 LOCAL os_timer_t link_led_timer;
 LOCAL uint8 link_led_level = 0;
 
@@ -50,53 +73,37 @@ user_plug_set_status(bool status)
 	if (RELAY_CLOSE_VALUE == status){
 		RELAY_CLOSE();
 		RELAY_LED_ON();
-		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
+		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
 	}else if(RELAY_OPEN_VALUE == status){
 		RELAY_OPEN();
 		RELAY_LED_OFF();
-		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
+		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
 	}
 }
 
-///******************************************************************************
-// * FunctionName : user_plug_short_press
-// * Description  : key's short press function, needed to be installed
-// * Parameters   : none
-// * Returns      : none
-//*******************************************************************************/
-//LOCAL void
-//user_plug_short_press(void)
-//{
-//    user_plug_set_status((~plug_param.status) & 0x01);
-//    spi_flash_erase_sector(PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE);
-//    spi_flash_write((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
-//                (uint32 *)&plug_param, sizeof(struct plug_saved_param));
-//}
-//
-///******************************************************************************
-// * FunctionName : user_plug_long_press
-// * Description  : key's long press function, needed to be installed
-// * Parameters   : none
-// * Returns      : none
-//*******************************************************************************/
-//LOCAL void
-//user_plug_long_press(void)
-//{
-//    int boot_flag=12345;
-//    user_esp_platform_set_active(0);
-//    system_restore();
-//
-//    system_rtc_mem_write(70, &boot_flag, sizeof(boot_flag));
-//    printf("long_press boot_flag %d  \n",boot_flag);
-//    system_rtc_mem_read(70, &boot_flag, sizeof(boot_flag));
-//    printf("long_press boot_flag %d  \n",boot_flag);
-//
-//#if RESTORE_KEEP_TIMER
-//    user_platform_timer_bkup();
-//#endif
-//
-//    system_restart();
-//}
+/******************************************************************************
+ * FunctionName : user_plug_short_press
+ * Description  : key's short press function, needed to be installed
+ * Parameters   : none
+ * Returns      : none
+*******************************************************************************/
+LOCAL void
+user_plug_short_press(void)
+{
+	printf("Short press!\n");
+}
+
+/******************************************************************************
+ * FunctionName : user_plug_long_press
+ * Description  : key's long press function, needed to be installed
+ * Parameters   : none
+ * Returns      : none
+*******************************************************************************/
+LOCAL void
+user_plug_long_press(void)
+{
+	printf("Long press!\n");
+}
 
 /******************************************************************************
  * FunctionName : user_link_led_init
@@ -107,14 +114,22 @@ user_plug_set_status(bool status)
 LOCAL void  
 user_link_led_init(void)
 {
-    PIN_FUNC_SELECT(PLUG_LINK_LED_IO_MUX, PLUG_LINK_LED_IO_FUNC);
+	GPIO_ConfigTypeDef io_out_conf;
+
+	printf("Configure user link LED pin.\n");
+	PIN_FUNC_SELECT(PLUG_LINK_LED_IO_MUX, PLUG_LINK_LED_IO_FUNC);
+	io_out_conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	io_out_conf.GPIO_Mode = GPIO_Mode_Output;
+	io_out_conf.GPIO_Pin = PLUG_LINK_LED_IO_PIN ;
+	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&io_out_conf);
 }
 
 LOCAL void  
 user_link_led_timer_cb(void)
 {
     link_led_level = (~link_led_level) & 0x01;
-    GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_IO_NUM), link_led_level);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_PIN_NUM), link_led_level);
 }
 
 void  
@@ -124,10 +139,10 @@ user_link_led_timer_init(int time)
     os_timer_setfn(&link_led_timer, (os_timer_func_t *)user_link_led_timer_cb, NULL);
     os_timer_arm(&link_led_timer, time, 1);
     link_led_level = 0;
-    GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_IO_NUM), link_led_level);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_PIN_NUM), link_led_level);
 }
 /*
-void  
+void
 user_link_led_timer_done(void)
 {
     os_timer_disarm(&link_led_timer);
@@ -141,25 +156,25 @@ user_link_led_timer_done(void)
  * Parameters   : mode, on/off/xhz
  * Returns      : none
 *******************************************************************************/
-void  
-user_link_led_output(uint8 mode)
+void
+user_link_led_output(UserLinkLedPattern_t tPattern)
 {
 
-    switch (mode) {
+    switch (tPattern) {
         case LED_OFF:
             os_timer_disarm(&link_led_timer);
-            GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_IO_NUM), 1);
+            GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_PIN_NUM), 1);
             break;
-    
+
         case LED_ON:
             os_timer_disarm(&link_led_timer);
-            GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_IO_NUM), 0);
+            GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_PIN_NUM), 0);
             break;
-    
+
         case LED_1HZ:
             user_link_led_timer_init(1000);
             break;
-    
+
         case LED_5HZ:
             user_link_led_timer_init(200);
             break;
@@ -172,7 +187,7 @@ user_link_led_output(uint8 mode)
             printf("ERROR:LED MODE WRONG!\n");
             break;
     }
-    
+
 }
 
 /******************************************************************************
@@ -222,28 +237,17 @@ user_plug_init(void)
 
     user_link_led_init();
 
-    wifi_status_led_install(PLUG_WIFI_LED_IO_NUM, PLUG_WIFI_LED_IO_MUX, PLUG_WIFI_LED_IO_FUNC);
+    wifi_status_led_install(PLUG_WIFI_LED_PIN_NUM, PLUG_WIFI_LED_IO_MUX, PLUG_WIFI_LED_IO_FUNC);
 
-//    single_key[0] = key_init_single(PLUG_KEY_0_IO_NUM, PLUG_KEY_0_IO_MUX, PLUG_KEY_0_IO_FUNC,
-//                                    user_plug_long_press, user_plug_short_press);
-//
-//    keys.key_num = PLUG_KEY_NUM;
-//    keys.single_key = single_key;
-//
-//    key_init(&keys);
+    user_key[0] = key_init_single(PLUG_USR_KEY_PIN_NUM, PLUG_USR_KEY_IO_MUX, PLUG_USR_KEY_IO_FUNC,
+                                    user_plug_long_press, user_plug_short_press);
 
-//    // relay open/close setting saved in flash and loaded at start up
-//	  // Not safe, now at start up just always relay open
-//    spi_flash_read((PRIV_PARAM_START_SEC + PRIV_PARAM_SAVE) * SPI_FLASH_SEC_SIZE,
-//                (uint32 *)&plug_param, sizeof(struct plug_saved_param));
+    keys.key_num = PLUG_USER_KEY_NUM;
+    keys.key_list = user_key;
+
+    key_init(&keys);
 
     relayInit();
-
-    // default to be off, for safety.
-//    if (plug_param.status == 0xff) {
-//        plug_param.status = 0;
-//    }
-
 }
 #endif
 

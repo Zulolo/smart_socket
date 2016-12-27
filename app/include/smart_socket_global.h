@@ -10,10 +10,6 @@
 
 #include "driver/gpio.h"
 
-
-#define LED_1_IO_PIN  		GPIO_Pin_4
-#define LED_1_PIN_NUM  		4
-
 #define RELAY_LED_IO_MUX	PERIPHS_IO_MUX_GPIO0_U
 #define RELAY_LED_IO_FUNC	FUNC_GPIO0
 #define RELAY_LED_IO_PIN  	GPIO_Pin_0
@@ -59,6 +55,14 @@ typedef enum{
 	REMOTE_OPERATE_SWITCH_OPEN = 0,
 	REMOTE_OPERATE_SWITCH_CLOSE
 }RemoteOperate_t;
+
+typedef enum{
+    LED_OFF = 0,
+    LED_ON  = 1,
+    LED_1HZ,
+    LED_5HZ,
+    LED_20HZ,
+}UserLinkLedPattern_t;
 
 typedef struct SmartSocketEvent{
     uint64 unTime;	// UTC seconds

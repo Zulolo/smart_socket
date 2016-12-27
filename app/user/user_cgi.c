@@ -216,7 +216,7 @@ event_history_get(cJSON *pcjson, const char* pname )
         return -1;
     }
     cJSON_AddItemToObject(pcjson, "event", pSubJsonEvent);
-    tEvent = URDT_nGetEventHistory(0);
+    tEvent = DAT_nGetEventHistory(0);
     if (SMART_SOCKET_EVENT_INVALID != tEvent.tEventType){
         cJSON_AddNumberToObject(pSubJsonEvent, "time", tEvent.unTime);
         cJSON_AddNumberToObject(pSubJsonEvent, "type", tEvent.tEventType);
@@ -275,10 +275,10 @@ switch_status_set(const char *pValue)
         if(pJsonSub_status->type == cJSON_Number){
 //        	if (RELAY_CLOSE_VALUE == pJsonSub_status->valueint){
 //        		RELAY_CLOSE();
-//        		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
+//        		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
 //        	}else if(RELAY_OPEN_VALUE == pJsonSub_status->valueint){
 //        		RELAY_OPEN();
-//        		URDT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
+//        		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
 //        	}
             user_plug_set_status(pJsonSub_status->valueint);
             if(NULL != pJson)cJSON_Delete(pJson);

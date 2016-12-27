@@ -18,7 +18,7 @@ struct single_key_param {
 };
 
 struct keys_param {
-    struct single_key_param **single_key;
+    struct single_key_param **key_list;
     uint8 key_num;
 };
 

@@ -13,7 +13,7 @@
 xSemaphoreHandle xSmartSocketEventListSemaphore;
 SmartSocketEventList_t tSmartSocketEventList;
 
-int32_t URDT_nAddEventHistory(uint64 unTime, EventType_t tEventType, uint64_t unData)	//void* pData, uint8_t unDataLen)
+int32_t DAT_nAddEventHistory(uint64 unTime, EventType_t tEventType, uint64_t unData)	//void* pData, uint8_t unDataLen)
 {
     if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
     	tSmartSocketEventList.tEvent[tSmartSocketEventList.unEventNum % EVENT_HISTORY_MAX_RECORD_NUM].unTime = unTime;
@@ -33,7 +33,7 @@ int32_t URDT_nAddEventHistory(uint64 unTime, EventType_t tEventType, uint64_t un
 	return 0;
 }
 
-SmartSocketEvent_t URDT_nGetEventHistory(uint8_t unEventSelecter)	// unEventSelecter =0 means latest, =1 means second last
+SmartSocketEvent_t DAT_nGetEventHistory(uint8_t unEventSelecter)	// unEventSelecter =0 means latest, =1 means second last
 {
 	SmartSocketEvent_t tEvent;
 	uint8_t unEventIndex;

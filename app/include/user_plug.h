@@ -2,37 +2,7 @@
 #define __USER_ESPSWITCH_H__
 
 #include "driver/key.h"
-
-/* NOTICE---this is for 4096KB spi flash with 1024+3072.
- * you can change to other sector if you use other size spi flash. */
-#define PRIV_PARAM_START_SEC        252	//0x7C
-
-#define PRIV_PARAM_SAVE     0
-//
-//#define PLUG_KEY_NUM            1
-//
-//#define PLUG_KEY_0_IO_MUX     PERIPHS_IO_MUX_MTCK_U
-//#define PLUG_KEY_0_IO_NUM     13
-//#define PLUG_KEY_0_IO_FUNC    FUNC_GPIO13
-
-#define PLUG_WIFI_LED_IO_MUX     PERIPHS_IO_MUX_MTDO_U
-#define PLUG_WIFI_LED_IO_NUM     15
-#define PLUG_WIFI_LED_IO_FUNC    FUNC_GPIO15
-
-#define PLUG_LINK_LED_IO_MUX     PERIPHS_IO_MUX_GPIO4_U
-#define PLUG_LINK_LED_IO_NUM     4
-#define PLUG_LINK_LED_IO_FUNC    FUNC_GPIO4
-
-
-#define PLUG_STATUS_OUTPUT(pin, on)     GPIO_OUTPUT_SET(pin, on)
-
-enum {
-    LED_OFF = 0,
-    LED_ON  = 1,
-    LED_1HZ,
-    LED_5HZ,
-    LED_20HZ,
-};
+#include "smart_socket_global.h"
 
 //struct plug_saved_param {
 //    uint8_t status;
@@ -42,8 +12,8 @@ enum {
 void user_plug_init(void);
 uint8 user_plug_get_status(void);
 void user_plug_set_status(bool status);
-BOOL user_get_key_status(void);
-
+//BOOL user_get_key_status(void);
+void user_link_led_output(UserLinkLedPattern_t tPattern);
 
 #endif
 

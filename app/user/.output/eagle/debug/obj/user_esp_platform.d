@@ -101,4 +101,5 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/smartconfig.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/upgrade.h \
  ../include/user_esp_platform.h ../include/user_plug.h \
- ../include/driver/key.h ../include/driver/gpio.h
+ ../include/driver/key.h ../include/driver/gpio.h \
+ ../include/smart_socket_global.h ../include/driver/gpio.h
