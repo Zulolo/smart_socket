@@ -28,6 +28,7 @@
 #define CS5463_WR_REG_CMD		0x40
 
 int8_t nCS5463_Temperature;
+uint32_t unCS5463_IRMS;
 
 void writeCS5463SPI(uint8_t unCmd)
 {
@@ -163,15 +164,22 @@ void CS5463_Manager(void *pvParameters)
 	while(1){
 		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463ReadData, sizeof(unCS5463ReadData));
 		nCS5463_Temperature = (int8_t)(unCS5463ReadData[0]);
-		if (unCS5463ReadData[0] > 28){
-
-		}
-		vTaskDelay(200/portTICK_RATE_MS);
+//		if (unCS5463ReadData[0] > 28){
+//
+//		}
+		vTaskDelay(100/portTICK_RATE_MS);
+		CS5463IF_Read(CS5463_CMD_RD_IRMS, unCS5463ReadData, sizeof(unCS5463ReadData));
+		unCS5463_IRMS = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		vTaskDelay(100/portTICK_RATE_MS);
 	}
 }
 
 double CS5463_dGetCurrent(void)
 {
-	printf("user_cs5463_get_current_d\n");
-	return 2.34;
+	return (double)unCS5463_IRMS;
+}
+
+double CS5463_dGetTemperature(void)
+{
+	return (double)nCS5463_Temperature;
 }

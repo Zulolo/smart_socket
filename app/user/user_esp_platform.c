@@ -28,6 +28,7 @@
 #include "upgrade.h"
 
 #include "user_esp_platform.h"
+#include "smart_socket_global.h"
 
 #if ESP_PLATFORM
 
@@ -1572,7 +1573,7 @@ user_esp_platform_maintainer(void *pvParameters)
     //printf("rtc_info.reason 000-%d, 000-%d reboot, flag %d\n",rtc_info.reason,(REBOOT_MAGIC == user_boot_flag),user_boot_flag);
 
     /*if not reboot back, power on with key pressed, enter stationap mode*/
-    if( REBOOT_MAGIC != user_boot_flag && 0 == user_get_key_status()){
+    if( (REBOOT_MAGIC != user_boot_flag) && (1 == user_get_key_status())){
         /*device power on with stationap mode defaultly, neednt config again*/
         //user_platform_stationap_enable();
         printf("enter softap+station mode\n");

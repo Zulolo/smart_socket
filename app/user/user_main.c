@@ -135,6 +135,7 @@ void cs5463Task(void)
 
 int32_t systemInit(void)
 {
+//	int i;
 	vSemaphoreCreateBinary(xSmartSocketEventListSemaphore);
 
 	if(NULL == xSmartSocketEventListSemaphore){
@@ -151,12 +152,18 @@ int32_t systemInit(void)
         }
 
         if (tSmartSocketEventList.unValidation != 0xA5A5A5A5){
+//        	printf("First time run the program, no event data in flash.\n");
         	memset(&tSmartSocketEventList, 0, sizeof(tSmartSocketEventList));
         	tSmartSocketEventList.unValidation = 0xA5A5A5A5;
         	system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY),
         			&tSmartSocketEventList, sizeof(tSmartSocketEventList));
         }
         xSemaphoreGive(xSmartSocketEventListSemaphore);
+//        printf("%u events have been read from flash.\n", tSmartSocketEventList.unEventNum);
+//        while ((i < 40) && (tSmartSocketEventList.tEvent[i].tEventType != SMART_SOCKET_EVENT_INVALID)){
+//        	printf("%u event: %d.\n", i, tSmartSocketEventList.tEvent[i].tEventType);
+//        	i++;
+//        }
     }else{
 		printf("Take event list semaphore failed.\n");
 		return (-1);
@@ -174,7 +181,6 @@ void user_init(void)
 	printf("Smart plug daemon start.\n");
 
     printf("SDK version:%s,%u\n", system_get_sdk_version(),__LINE__ );
-    user_link_led_output(LED_20HZ);
 
     systemInit();
 

@@ -84,6 +84,8 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/spi_flash.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/pwm.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/mem.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/esp_libc.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sockets.h \

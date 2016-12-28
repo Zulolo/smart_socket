@@ -12,6 +12,7 @@
 #include "user_config.h"
 #if PLUG_DEVICE
 #include "user_plug.h"
+#include "user_data.h"
 #include "smart_socket_global.h"
 
 /* NOTICE---this is for 4096KB spi flash with 1024+3072.
@@ -199,7 +200,7 @@ user_link_led_output(UserLinkLedPattern_t tPattern)
 BOOL  
 user_get_key_status(void)
 {
-    return ((system_adc_read() > 10) ? (1):(0));//get_key_status(single_key[0]);
+    return get_key_status(user_key[0]);
 }
 
 void relayInit(void)

@@ -12,6 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 
 #include "lwip/mem.h"
 #include "lwip/sockets.h"
@@ -50,7 +51,8 @@ typedef struct _scaninfo {
 LOCAL scaninfo *pscaninfo;
 extern u16 scannum;
 
-extern int8_t nCS5463_Temperature;
+extern xSemaphoreHandle xSmartSocketEventListSemaphore;
+extern SmartSocketEventList_t tSmartSocketEventList;
 
 LOCAL os_timer_t *restart_xms;
 LOCAL rst_parm *rstparm;
@@ -190,7 +192,7 @@ temperature_value_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "temperature", nCS5463_Temperature);
+    cJSON_AddNumberToObject(pSubJson_response, "temperature", CS5463_dGetTemperature());
     cJSON_AddStringToObject(pSubJson_response, "unit", "C");
     return 0;
 }
@@ -210,7 +212,7 @@ event_history_get(cJSON *pcjson, const char* pname )
     cJSON * pSubJsonEvent = cJSON_CreateObject();
     SmartSocketEvent_t tEvent;
 
-    printf("Get event history.\n");
+//    printf("Get event history.\n");
     if(NULL == pSubJsonEvent){
         printf("pSubJsonEvent creat fail\n");
         return -1;
@@ -501,7 +503,15 @@ LOCAL int
 system_status_reset(const char *pValue)
 {
     printf("system_status_reset %s \n", pValue);
-    
+    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
+        if (tSmartSocketEventList.unValidation != 0xA5A5A5A5){
+        	memset(&tSmartSocketEventList, 0, sizeof(tSmartSocketEventList));
+        	tSmartSocketEventList.unValidation = 0xA5A5A5A5;
+        	system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY),
+        			&tSmartSocketEventList, sizeof(tSmartSocketEventList));
+        }
+        xSemaphoreGive(xSmartSocketEventListSemaphore);
+    }
     return 0;
 }
 
@@ -1105,7 +1115,7 @@ int   cgiEspApi(HttpdConnData *connData) {
             
         } else {
             //Found, req is using GET
-        	printf("GET command %s:%s found.\n", espCgiApiNodes[i].file, espCgiApiNodes[i].cmd);
+//        	printf("GET command %s:%s found.\n", espCgiApiNodes[i].file, espCgiApiNodes[i].cmd);
             //printf("get cmd found %s\n",espCgiApiNodes[i].cmd);
             pcjson=cJSON_CreateObject();
             if(NULL == pcjson) {
