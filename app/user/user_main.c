@@ -186,16 +186,10 @@ void user_init(void)
 
     cs5463Task();
 
-    /* need to set opmode before you set config */
-//	printf("Set opmode to STATION_MODE before invoke smartconfig_task.\n");
-//    wifi_set_opmode(STATIONAP_MODE);
-
-#if ESP_PLATFORM
     /*Initialization of the peripheral drivers*/
     /*For light demo , it is user_light_init();*/
     /* Also check whether assigned ip addr by the router.If so, connect to ESP-server  */
     user_esp_platform_init();
-#endif
 
     /*Establish a udp socket to receive local device detect info.*/
     /*Listen to the port 1025, as well as udp broadcast.
