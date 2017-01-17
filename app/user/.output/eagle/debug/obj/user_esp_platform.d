@@ -97,6 +97,8 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/multi-threads/sockets_mt.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sockets.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_opts.h \
  ../include/user_iot_version.h ../include/user_config.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/smartconfig.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/upgrade.h \
