@@ -928,6 +928,17 @@ user_platform_stationap_enable(void)
     wifi_set_opmode(STATIONAP_MODE);
 }
 
+void startSmartConfig(void)
+{
+	printf("No previous AP record found, enter smart config. \n");
+	wifi_set_opmode(STATION_MODE);
+	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
+
+	while(device_status != DEVICE_GOT_IP){
+		ESP_DBG("configing...\n");
+		vTaskDelay(2000 / portTICK_RATE_MS);
+	}
+}
 /******************************************************************************
  * FunctionName : user_esp_platform_init
  * Description  : device parame init based on espressif platform
@@ -993,14 +1004,7 @@ user_esp_platform_maintainer(void *pvParameters)
         printf("wifi_station_get_ap num %d\n",ret);
         if(0 == ret) {
 			/*AP_num == 0, no ap cached,start smartcfg*/
-        	printf("No previous AP record found, enter smart config. \n");
-			wifi_set_opmode(STATION_MODE);
-			xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
-
-			while(device_status != DEVICE_GOT_IP){
-				ESP_DBG("configing...\n");
-				vTaskDelay(2000 / portTICK_RATE_MS);
-			}
+        	startSmartConfig();
         }else{
             /* entry station mode and connect to ap cached */
             printf("entry station mode to connect server \n");

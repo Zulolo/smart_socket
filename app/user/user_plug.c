@@ -22,27 +22,50 @@
 #define PRIV_PARAM_SAVE     0
 
 #define PLUG_USER_KEY_NUM      1
+//
+//#define PLUG_WIFI_LED_IO_MUX	PERIPHS_IO_MUX_MTDO_U
+//#define PLUG_WIFI_LED_PIN_NUM	15
+//#define PLUG_WIFI_LED_IO_FUNC	FUNC_GPIO15
 
-#define PLUG_WIFI_LED_IO_MUX	PERIPHS_IO_MUX_MTDO_U
-#define PLUG_WIFI_LED_PIN_NUM	15
-#define PLUG_WIFI_LED_IO_FUNC	FUNC_GPIO15
-
-#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO4_U
-#define PLUG_LINK_LED_PIN_NUM	4
-#define PLUG_LINK_LED_IO_PIN  	GPIO_Pin_4
-#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO4
+#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO2_U
+#define PLUG_LINK_LED_PIN_NUM	2
+#define PLUG_LINK_LED_IO_PIN  	GPIO_Pin_2
+#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO2
 
 #define PLUG_USR_KEY_IO_MUX		PERIPHS_IO_MUX_MTDO_U
 #define PLUG_USR_KEY_PIN_NUM	15
 #define PLUG_USR_KEY_IO_PIN  	GPIO_Pin_15
 #define PLUG_USR_KEY_IO_FUNC	FUNC_GPIO15
 
+#define RELAY_LED_IO_MUX	PERIPHS_IO_MUX_GPIO0_U
+#define RELAY_LED_IO_FUNC	FUNC_GPIO0
+#define RELAY_LED_IO_PIN  	GPIO_Pin_0
+#define RELAY_LED_PIN_NUM	0
+#define RELAY_LED_ON()		GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 1)
+#define RELAY_LED_OFF()		GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 0)
+
+#define RELAY_IO_MUX		PERIPHS_IO_MUX_GPIO4_U
+#define RELAY_IO_FUNC		FUNC_GPIO4
+#define RELAY_IO_PIN  		GPIO_Pin_4
+#define RELAY_PIN_NUM		4
+#define RELAY_CLOSE()		GPIO_OUTPUT_SET(RELAY_PIN_NUM, 1)
+#define RELAY_OPEN()		GPIO_OUTPUT_SET(RELAY_PIN_NUM, 0)
+#define RELAY_GET_STATE()	((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(1):(0))
+
+#define RELAY_CLOSE_VALUE	1
+#define RELAY_OPEN_VALUE	0
 
 //LOCAL struct plug_saved_param plug_param;
 LOCAL struct keys_param keys;
 LOCAL struct single_key_param *user_key[PLUG_USER_KEY_NUM];
 LOCAL os_timer_t link_led_timer;
 LOCAL uint8 link_led_level = 0;
+LOCAL uint8 device_status;
+
+//extern bool smartconfig_start(sc_callback_t cb, ...);
+//extern bool smartconfig_stop(void);
+//extern void ICACHE_FLASH_ATTR smartconfig_done(sc_status status, void *pdata);
+extern void startSmartConfig(void);
 
 /******************************************************************************
  * FunctionName : user_plug_get_status
@@ -69,7 +92,7 @@ user_plug_set_status(bool status)
 		printf("error status input!\n");
 		return;
 	}
-	printf("status input! %d\n", status);
+//	printf("status input! %d\n", status);
 
 	if (RELAY_CLOSE_VALUE == status){
 		RELAY_CLOSE();
@@ -83,6 +106,18 @@ user_plug_set_status(bool status)
 }
 
 /******************************************************************************
+ * FunctionName : user_plug_toggle_status
+ * Description  : toggle relay close/open status
+ * Parameters   : none
+ * Returns      : none
+*******************************************************************************/
+void
+user_plug_toggle_status(void)
+{
+	user_plug_set_status((RELAY_CLOSE_VALUE == (RELAY_GET_STATE()))?(RELAY_OPEN_VALUE):(RELAY_CLOSE_VALUE));
+}
+
+/******************************************************************************
  * FunctionName : user_plug_short_press
  * Description  : key's short press function, needed to be installed
  * Parameters   : none
@@ -92,6 +127,7 @@ LOCAL void
 user_plug_short_press(void)
 {
 	printf("Short press!\n");
+	user_plug_toggle_status();
 }
 
 /******************************************************************************
@@ -104,6 +140,9 @@ LOCAL void
 user_plug_long_press(void)
 {
 	printf("Long press!\n");
+	smartconfig_stop();
+
+	startSmartConfig();
 }
 
 /******************************************************************************
@@ -238,7 +277,7 @@ user_plug_init(void)
 
     user_link_led_init();
 
-    wifi_status_led_install(PLUG_WIFI_LED_PIN_NUM, PLUG_WIFI_LED_IO_MUX, PLUG_WIFI_LED_IO_FUNC);
+//    wifi_status_led_install(PLUG_WIFI_LED_PIN_NUM, PLUG_WIFI_LED_IO_MUX, PLUG_WIFI_LED_IO_FUNC);
 
     user_key[0] = key_init_single(PLUG_USR_KEY_PIN_NUM, PLUG_USR_KEY_IO_MUX, PLUG_USR_KEY_IO_FUNC,
                                     user_plug_long_press, user_plug_short_press);

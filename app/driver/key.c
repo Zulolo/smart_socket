@@ -69,7 +69,7 @@ key_init(struct keys_param *keys)
     
     for (i = 0; i < keys->key_num; i++) {
         keys->key_list[i]->key_level = 1;
-        pGPIOConfig->GPIO_IntrType = GPIO_PIN_INTR_NEGEDGE;
+        pGPIOConfig->GPIO_IntrType = GPIO_PIN_INTR_POSEDGE;
         pGPIOConfig->GPIO_Pullup = GPIO_PullUp_DIS;	//GPIO_PullUp_EN;
         pGPIOConfig->GPIO_Mode = GPIO_Mode_Input;
         pGPIOConfig->GPIO_Pin = (1 << keys->key_list[i]->gpio_id);//this is GPIO_Pin_13 for switch
