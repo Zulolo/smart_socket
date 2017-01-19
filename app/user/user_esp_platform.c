@@ -76,7 +76,7 @@ LOCAL uint8 iot_version[20];
 LOCAL struct client_conn_param client_param;
 //LOCAL char pusrdata[2048];
 
-LOCAL xQueueHandle QueueStop = NULL;
+//LOCAL xQueueHandle QueueStop = NULL;
 //LOCAL os_timer_t client_timer;
 
 /******************************************************************************
@@ -951,6 +951,7 @@ user_esp_platform_maintainer(void *pvParameters)
     int ret;
     u8 timeout_count = 0;
     int32 nNetTimeout=1000;// 1 Sec
+    uint32_t unSNTPTime;
 
     u8 connect_retry_c;
     u8 total_connect_retry_c;
@@ -965,8 +966,6 @@ user_esp_platform_maintainer(void *pvParameters)
     
     client_param.sock_fd=-1;
     
-    //vTaskDelay(10000 / portTICK_RATE_MS);//wait pc serial ready
-
     user_esp_platform_param_recover();
 
     user_plug_init();
@@ -1011,128 +1010,12 @@ user_esp_platform_maintainer(void *pvParameters)
             wifi_set_opmode(STATION_MODE);
         }
 //    }
-        sntp_setservername(0, "asia.pool.ntp.org");
-        sntp_setservername(1, "pool.ntp.org");
-        sntp_init();
-//    /*if token not ready, wait here*/
-//    while(TRUE != esp_param.tokenrdy) {
-//        //ESP_DBG("token invalid...\n");
-//        vTaskDelay(1000 / portTICK_RATE_MS);
-//    }
 
-//    while(1){
-//        xStatus = xQueueReceive(QueueStop,&ValueFromReceive,0);
-//        if ( pdPASS == xStatus && TRUE == ValueFromReceive){
-//            ESP_DBG("platform_maintainer rcv exit signal!\n");
-//            break;
-//        }
-//
-//        //check ip or DNS, led start blinking
-//        if(wifi_get_opmode()==STATION_MODE)
-//        	user_link_led_output(LED_5HZ);
-//
-//        do{
-//            ret = user_esp_platform_check_conection();
-//        }while(AP_DISCONNECTED == ret || DNS_FAIL == ret);
-//
-//        client_param.sock_fd= socket(PF_INET, SOCK_STREAM, 0);
-//        if (-1 == client_param.sock_fd) {
-//            close(client_param.sock_fd);
-//            ESP_DBG("socket fail!\n");
-//            continue;
-//        }
-//
-//        bzero(&remote_addr, sizeof(struct sockaddr_in));
-//        memcpy(&remote_addr.sin_addr.s_addr, &esp_server_ip, 4);
-//        remote_addr.sin_family = AF_INET;
-//        remote_addr.sin_len = sizeof(remote_addr);
-//        remote_addr.sin_port = htons(8000);
-//
-//        device_status = DEVICE_CONNECTING;
-//        connect_retry_c= 20;//connect retry times per AP
-//        do{
-//            ret = connect(client_param.sock_fd,(struct sockaddr*)&remote_addr,sizeof(struct sockaddr));
-//            if(0 != ret){
-//                ESP_DBG("connect fail!\n");
-//                device_status = DEVICE_CONNECT_SERVER_FAIL;
-//                vTaskDelay(1000 / portTICK_RATE_MS);
-//            }else{
-//                ESP_DBG("connect sucess!\n");
-//                user_esp_platform_connected(&client_param);
-//                break;
-//            }
-//        }while((connect_retry_c-- != 0) && ret);
-//
-//        if(connect_retry_c == 0 && ret){
-//            close(client_param.sock_fd);
-//            //connect fail,go big loop, try another AP
-//            continue;
-//        }
-//
-//        user_esp_platform_sent(&client_param);
-//
-//        fd_set read_set,write_set;
-//        struct timeval timeout;
-//        while(1){
-//
-//            xStatus = xQueueReceive(QueueStop,&ValueFromReceive,0);
-//            if ( pdPASS == xStatus && TRUE == ValueFromReceive){
-//                ESP_DBG("esp_platform_maintainer rcv exit signal!\n");
-//                break;
-//            }
-//
-//            /*clear fdset, and set the selct function wait time*/
-//            FD_ZERO(&read_set);
-//            timeout.tv_sec = 1;
-//            timeout.tv_usec = 0;
-//            /* allow parallel reading of server and standard input */
-//            FD_SET(client_param.sock_fd, &read_set);
-//
-//            ret = select(client_param.sock_fd+1, &read_set, NULL, NULL, &timeout);
-//            if ((ret) > 0){
-//                /* read standard input? */
-//                if (FD_ISSET(client_param.sock_fd, &read_set)){
-//                    printf("read application data\n");
-//                    //setsockopt(client_param.sock_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&nNetTimeout, sizeof(int));
-//                    memset(pusrdata, 0, sizeof(pusrdata));
-//                    ret = recv(client_param.sock_fd, (u8 *)pusrdata, sizeof(pusrdata), 0);
-//                    if (ret > 0){
-//                        user_esp_platform_data_process(&client_param,pusrdata,ret);
-//                        timeout_count = 0;
-//                    }else if ((ret == 0)||(ret == -1 && errno != EAGAIN)){
-//                        //ret == 0 connection is closed by server
-//                        //ret == -1 && ERRNO != AGAIN, not timeout, smth wrong
-//                        //disconnect,exit the recv loop,to connect again
-//                        ESP_DBG("recv error %d,disconnect with server!\n", ret);
-//                        user_esp_platform_discon(&client_param);
-//                        timeout_count = 0;
-//                        break;
-//                    }
-//                }
-//            }else{
-//                //start the tmeout counter,once it reach the beacon time,send the beacon and wait response,
-//                wifi_get_ip_info(STATION_IF, &sta_ipconfig);
-//                if((sta_ipconfig.ip.addr == 0 || wifi_station_get_connect_status() != STATION_GOT_IP)){
-//                    user_esp_platform_discon(&client_param);
-//                    timeout_count = 0;
-//                    break;
-//                }
-//
-//                if(timeout_count++ > BEACON_TIME/nNetTimeout){
-//                    if (ping_status == FALSE) {        //disconnect,exit the recv loop,to connect again
-//                        ESP_DBG("user_esp_platform_sent_beacon,server noresponse, and beacon time comes again!\n");
-//                        user_esp_platform_discon(&client_param);
-//                        break;
-//                    }
-//                    user_esp_platform_sent_beacon(&client_param);
-//                    ping_status == FALSE;
-//                    timeout_count = 0;
-//                }
-//            }
-//            //jeremy, what about the stack, the fit value?
-//            ESP_DBG("platform_maintainer stack:%d heap:%d\n",uxTaskGetStackHighWaterMark(NULL),system_get_free_heap_size());
-//		}
-//    }
+        sntp_setservername(0,"cn.pool.ntp.org");
+        sntp_setservername(1,"asia.pool.ntp.org");
+        sntp_setservername(2,"pool.ntp.org");
+        sntp_init();
+
 //Local_mode:
 //	wifi_set_opmode(STATIONAP_MODE);
 //
@@ -1141,38 +1024,44 @@ user_esp_platform_maintainer(void *pvParameters)
 //
 //    vQueueDelete(QueueStop);
 //    QueueStop = NULL;
-//    printf("user_esp_platform_maintainer task end.\n");
-//    vTaskDelete(NULL);
+    while(1){
+        unSNTPTime = sntp_get_current_timestamp();
+        os_printf("time:%d\r\n",unSNTPTime);
+        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
+    	vTaskDelay(2000/portTICK_RATE_MS);
+    }
+    printf("user_esp_platform_maintainer task end.\n");
+    vTaskDelete(NULL);
 
 }
 
 
 void   user_esp_platform_init(void)
 {
-    if (QueueStop == NULL)
-        QueueStop = xQueueCreate(1,1);
+//    if (QueueStop == NULL)
+//        QueueStop = xQueueCreate(1,1);
 
-    if (QueueStop != NULL){
+//    if (QueueStop != NULL){
         xTaskCreate(user_esp_platform_maintainer, "platform_maintainer", 384, NULL, 5, NULL);//512, 274 left,384
-    }
+//    }
         
 }
 
-sint8   user_esp_platform_deinit(void)
-{
-    bool ValueToSend = true;
-    portBASE_TYPE xStatus;
-    if (QueueStop == NULL)
-        return -1;
-
-    xStatus = xQueueSend(QueueStop,&ValueToSend,0);
-    if (xStatus != pdPASS){
-        ESP_DBG("WEB SEVER Could not send to the queue!\n");
-        return -1;
-    } else {
-        taskYIELD();
-        return pdPASS;
-    }
-}
+//sint8   user_esp_platform_deinit(void)
+//{
+//    bool ValueToSend = true;
+//    portBASE_TYPE xStatus;
+//    if (QueueStop == NULL)
+//        return -1;
+//
+//    xStatus = xQueueSend(QueueStop,&ValueToSend,0);
+//    if (xStatus != pdPASS){
+//        ESP_DBG("WEB SEVER Could not send to the queue!\n");
+//        return -1;
+//    } else {
+//        taskYIELD();
+//        return pdPASS;
+//    }
+//}
 
 #endif

@@ -27,6 +27,12 @@
 #define CS5463_RD_REG_CMD		0x00
 #define CS5463_WR_REG_CMD		0x40
 
+typedef struct TrendContent{
+	int8_t unTemperature;	// UTC seconds
+	uint32_t unCurrent;
+	uint32_t unPower;
+}TrendContent_t;
+
 int8_t nCS5463_Temperature;
 uint32_t unCS5463_IRMS;
 
@@ -149,6 +155,21 @@ void CS5463IF_Init()
 	CS5463_DESELECT();
 }
 
+bool trend_record_add(uint32_t unTimeStamp, TrendContent_t tValueNeedToAdd)
+{
+
+	return true;
+}
+
+os_timer_t tTrendRecord;
+void ICACHE_FLASH_ATTR
+trend_record_callback(void *arg)
+{
+	TrendContent_t tValue;
+	tValue.unTemperature = nCS5463_Temperature;
+    trend_record_add(sntp_get_current_timestamp(), tValue);
+}
+
 void CS5463_Manager(void *pvParameters)
 {
 	uint8_t unCS5463ReadData[3];	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
@@ -161,6 +182,11 @@ void CS5463_Manager(void *pvParameters)
 	vTaskDelay(500/portTICK_RATE_MS);
 
 	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
+
+    os_timer_disarm(&tTrendRecord);
+    os_timer_setfn(&tTrendRecord, trend_record_callback , NULL);
+    os_timer_arm(&tTrendRecord, 5000, 1);
+
 	while(1){
 		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463ReadData, sizeof(unCS5463ReadData));
 		nCS5463_Temperature = (int8_t)(unCS5463ReadData[0]);

@@ -202,8 +202,8 @@ void user_init(void)
     user_webserver_start();
 
 #elif HTTPD_SERVER
-	/*Initialize DNS server for captive portal*/
-	captdnsInit();
+//	/*Initialize DNS server for captive portal*/
+//	captdnsInit();
 
 	/*Initialize espfs containing static webpages*/
     espFsInit((void*)(webpages_espfs_start));
