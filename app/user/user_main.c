@@ -82,7 +82,9 @@ HttpdBuiltInUrl builtInUrls[]={
 #endif
 
 extern xSemaphoreHandle xSmartSocketEventListSemaphore;
+extern xSemaphoreHandle xSmartSocketParameterSemaphore;
 extern SmartSocketEventList_t tSmartSocketEventList;
+extern SmartSocketParameter_t tSmartSocketParameter;
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
  * Description  : SDK just reversed 4 sectors, used for rf init data and paramters.
@@ -135,39 +137,32 @@ void cs5463Task(void)
 
 int32_t systemInit(void)
 {
-//	int i;
 	vSemaphoreCreateBinary(xSmartSocketEventListSemaphore);
+	vSemaphoreCreateBinary(xSmartSocketParameterSemaphore);
 
-	if(NULL == xSmartSocketEventListSemaphore){
-		printf("Create event list semaphore failed.\n");
+	if((NULL == xSmartSocketEventListSemaphore) || (NULL == xSmartSocketParameterSemaphore)){
+		printf("Create semaphore failed.\n");
 		return (-1);
 	}
 
-    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
-        if (system_param_load(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY), 0,
-        		&tSmartSocketEventList, sizeof(tSmartSocketEventList)) != true){
-        	xSemaphoreGive(xSmartSocketEventListSemaphore);
-    		printf("Load initial event list data failed.\n");
+    if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+        if (system_param_load(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA), 0,
+        		&tSmartSocketParameter, sizeof(tSmartSocketParameter)) != true){
+        	xSemaphoreGive(xSmartSocketParameterSemaphore);
+    		printf("Load initial parameter failed.\n");
     		return (-1);
         }
-
-        if (tSmartSocketEventList.unValidation != 0xA5A5A5A5){
-//        	printf("First time run the program, no event data in flash.\n");
-        	memset(&tSmartSocketEventList, 0, sizeof(tSmartSocketEventList));
-        	tSmartSocketEventList.unValidation = 0xA5A5A5A5;
-        	system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY),
-        			&tSmartSocketEventList, sizeof(tSmartSocketEventList));
-        }
-        xSemaphoreGive(xSmartSocketEventListSemaphore);
-//        printf("%u events have been read from flash.\n", tSmartSocketEventList.unEventNum);
-//        while ((i < 40) && (tSmartSocketEventList.tEvent[i].tEventType != SMART_SOCKET_EVENT_INVALID)){
-//        	printf("%u event: %d.\n", i, tSmartSocketEventList.tEvent[i].tEventType);
-//        	i++;
-//        }
+        xSemaphoreGive(xSmartSocketParameterSemaphore);
     }else{
-		printf("Take event list semaphore failed.\n");
+		printf("Take parameter semaphore failed.\n");
 		return (-1);
     }
+
+	if (tSmartSocketParameter.unValidation != 0xA5A5A5A5){
+		// first run
+		DAT_nFlashDataClean();
+	}
+
 	return 0;
 }
 /******************************************************************************

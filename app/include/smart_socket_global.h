@@ -17,10 +17,13 @@
 #define GET_USER_DATA_SECTORE(tType)	((FLASH_USER_DATA_OFFSET / FLASH_SECTOR_SIZE) + FLASH_PROTECT_SECTORS * (tType))
 
 #define EVENT_HISTORY_MAX_RECORD_NUM	32
+#define MAX_SIGNED_INT_16_VALUE			0x8000
+#define MAX_TREND_RECORD_SIZE			0x100000
 
 typedef enum{
 	USER_DATA_EVENT_HISTORY = 0,	// event history
-	USER_DATA_CONF_PARA				// configure parameter
+	USER_DATA_CONF_PARA,			// configure parameter
+	USER_DATA_TREND					// trend
 }UserDataType_t;
 
 typedef enum{
@@ -49,17 +52,31 @@ typedef struct SmartSocketEvent{
     uint64 unTime;	// UTC seconds
     EventType_t tEventType;
     uint64_t data;
-//	union {
-//		double dCurrent;		/**< current information */
-//		double dVoltage;		/**< voltage information */
-//		RemoteOperate_t tRemoteOperate;
-//	}data;				/**< event data... */
 }SmartSocketEvent_t;
 
 typedef struct SmartSocketEventList {
     uint32 unEventNum;
-    uint32 unValidation;	//TODO: use CRC of tEvent array data
     SmartSocketEvent_t tEvent[EVENT_HISTORY_MAX_RECORD_NUM];
 }SmartSocketEventList_t;
+
+typedef struct SmartSocketParameter{
+	struct
+	{
+		uint32 bButtonRelayEnable : 1;
+		uint32 bTrendEnable : 1;
+		uint32 unused : 30;
+	}tConfigure;
+	uint32 unTrendRecordNum;
+	uint32 unTrendIndex;
+	uint32 unValidation;	//TODO: use CRC of tEvent array data
+}SmartSocketParameter_t;
+
+typedef struct TrendContent{
+	uint32_t unTime;
+	float fTemperature;
+	float fCurrent;
+	float fVoltage;
+	float fPower;
+}TrendContent_t;
 
 #endif /* APP_INCLUDE_SMART_SOCKET_GLOBAL_H_ */

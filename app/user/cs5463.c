@@ -27,14 +27,12 @@
 #define CS5463_RD_REG_CMD		0x00
 #define CS5463_WR_REG_CMD		0x40
 
-typedef struct TrendContent{
-	int8_t unTemperature;	// UTC seconds
-	uint32_t unCurrent;
-	uint32_t unPower;
-}TrendContent_t;
+int8_t fCS5463_T;
+float fCS5463_I;
+float fCS5463_V;
+float fCS5463_P;
 
-int8_t nCS5463_Temperature;
-uint32_t unCS5463_IRMS;
+//FLASH_SECTOR_SIZE
 
 void writeCS5463SPI(uint8_t unCmd)
 {
@@ -155,18 +153,15 @@ void CS5463IF_Init()
 	CS5463_DESELECT();
 }
 
-bool trend_record_add(uint32_t unTimeStamp, TrendContent_t tValueNeedToAdd)
-{
-
-	return true;
-}
-
 os_timer_t tTrendRecord;
 void ICACHE_FLASH_ATTR
 trend_record_callback(void *arg)
 {
 	TrendContent_t tValue;
-	tValue.unTemperature = nCS5463_Temperature;
+	tValue.fTemperature = fCS5463_T;
+	tValue.fCurrent = fCS5463_I;
+	tValue.fVoltage = fCS5463_V;
+	tValue.fPower = fCS5463_P;
     trend_record_add(sntp_get_current_timestamp(), tValue);
 }
 
@@ -188,24 +183,44 @@ void CS5463_Manager(void *pvParameters)
     os_timer_arm(&tTrendRecord, 5000, 1);
 
 	while(1){
+		// Temperature
 		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463ReadData, sizeof(unCS5463ReadData));
-		nCS5463_Temperature = (int8_t)(unCS5463ReadData[0]);
-//		if (unCS5463ReadData[0] > 28){
-//
-//		}
-		vTaskDelay(100/portTICK_RATE_MS);
-		CS5463IF_Read(CS5463_CMD_RD_IRMS, unCS5463ReadData, sizeof(unCS5463ReadData));
-		unCS5463_IRMS = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
-		vTaskDelay(100/portTICK_RATE_MS);
+		fCS5463_T = (int8_t)(unCS5463ReadData[0]);
+		vTaskDelay(200/portTICK_RATE_MS);
+
+		// Current
+		CS5463IF_Read(CS5463_CMD_RD_I, unCS5463ReadData, sizeof(unCS5463ReadData));
+		fCS5463_I = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		vTaskDelay(200/portTICK_RATE_MS);
+
+		// Voltage
+		CS5463IF_Read(CS5463_CMD_RD_V, unCS5463ReadData, sizeof(unCS5463ReadData));
+		fCS5463_V = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		vTaskDelay(200/portTICK_RATE_MS);
+
+		// Power
+		CS5463IF_Read(CS5463_CMD_RD_P, unCS5463ReadData, sizeof(unCS5463ReadData));
+		fCS5463_P = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		vTaskDelay(200/portTICK_RATE_MS);
 	}
 }
 
-double CS5463_dGetCurrent(void)
+float CS5463_fGetCurrent(void)
 {
-	return (double)unCS5463_IRMS;
+	return fCS5463_I;
 }
 
-double CS5463_dGetTemperature(void)
+float CS5463_fGetVoltage(void)
 {
-	return (double)nCS5463_Temperature;
+	return fCS5463_V;
+}
+
+float CS5463_fGetPower(void)
+{
+	return fCS5463_P;
+}
+
+float CS5463_fGetTemperature(void)
+{
+	return fCS5463_T;
 }

@@ -38,7 +38,9 @@ typedef enum{
 }CS5463_CMD_t;
 
 void CS5463_Manager(void *pvParameters);
-double CS5463_dGetCurrent(void);
-double CS5463_dGetTemperature(void);
+float CS5463_fGetCurrent(void);
+float CS5463_fGetVoltage(void);
+float CS5463_fGetPower(void);
+float CS5463_fGetTemperature(void);
 
 #endif /* APP_INCLUDE_CS5463_H_ */

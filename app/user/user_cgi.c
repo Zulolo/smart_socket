@@ -24,12 +24,7 @@
 #include "user_esp_platform.h"
 #endif
 
-#if PLUG_DEVICE
 #include "user_plug.h"
-#endif
-#if LIGHT_DEVICE
-#include "user_light.h"
-#endif
 
 #include "upgrade.h"
 
@@ -49,7 +44,6 @@ typedef struct _scaninfo {
     uint8 data_cnt;
 } scaninfo;
 LOCAL scaninfo *pscaninfo;
-extern u16 scannum;
 
 extern xSemaphoreHandle xSmartSocketEventListSemaphore;
 extern SmartSocketEventList_t tSmartSocketEventList;
@@ -112,31 +106,15 @@ system_info_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "Device", pSubJson_Device);
 
-#if SENSOR_DEVICE
-    cJSON_AddStringToObject(pSubJson_Version,"hardware","0.3");
-#else
     cJSON_AddStringToObject(pSubJson_Version,"hardware","0.1");
-#endif
     cJSON_AddStringToObject(pSubJson_Version,"sdk_version",system_get_sdk_version());
     sprintf(buff,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
     IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
     cJSON_AddStringToObject(pSubJson_Version,"iot_version",buff);
     
-
     cJSON_AddStringToObject(pSubJson_Device,"manufacture","Ming zhi hai mei qi hao");
-#if SENSOR_DEVICE
-#if HUMITURE_SUB_DEVICE
-    cJSON_AddStringToObject(pSubJson_Device,"product", "Humiture");
-#elif FLAMMABLE_GAS_SUB_DEVICE
-    cJSON_AddStringToObject(pSubJson_Device,"product", "Flammable Gas");
-#endif
-#endif
-#if PLUG_DEVICE
+
     cJSON_AddStringToObject(pSubJson_Device,"product", "Smart Socket");
-#endif
-#if LIGHT_DEVICE
-    cJSON_AddStringToObject(pSubJson_Device,"product", "Light");
-#endif
 
     //char * p = cJSON_Print(pcjson);
     //printf("@.@ system_info_get exit with  %s len:%d \n", p, strlen(p));
@@ -144,7 +122,6 @@ system_info_get(cJSON *pcjson, const char* pname )
     return 0;
 }
 
-#if PLUG_DEVICE
 /******************************************************************************
  * FunctionName : current_value_get
  * Description  : set up current value as a JSON format
@@ -160,14 +137,66 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     printf("Get current from cs5463.\n");
     if(NULL == pSubJson_response){
+        printf("pSubJson_response create fail\n");
+        return -1;
+    }
+
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_fGetCurrent());
+    cJSON_AddStringToObject(pSubJson_response, "unit", "A");
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : voltage_value_get
+ * Description  : set up voltage value as a JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{
+"current":3.2}}
+*******************************************************************************/
+LOCAL int
+voltage_value_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+
+    printf("Get voltage from cs5463.\n");
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response create fail\n");
+        return -1;
+    }
+
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "voltage", CS5463_fGetVoltage());
+    cJSON_AddStringToObject(pSubJson_response, "unit", "V");
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : power_value_get
+ * Description  : set up power value as a JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{
+"current":3.2}}
+*******************************************************************************/
+LOCAL int
+power_value_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+
+    printf("Get power from cs5463.\n");
+    if(NULL == pSubJson_response){
         printf("pSubJson_response creat fail\n");
         return -1;
     }
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_dGetCurrent());
-    cJSON_AddStringToObject(pSubJson_response, "unit", "A");
+    cJSON_AddNumberToObject(pSubJson_response, "power", CS5463_fGetPower());
+    cJSON_AddStringToObject(pSubJson_response, "unit", "W");
     return 0;
 }
 
@@ -192,7 +221,7 @@ temperature_value_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "temperature", CS5463_dGetTemperature());
+    cJSON_AddNumberToObject(pSubJson_response, "temperature", CS5463_fGetTemperature());
     cJSON_AddStringToObject(pSubJson_response, "unit", "C");
     return 0;
 }
@@ -293,202 +322,7 @@ switch_status_set(const char *pValue)
     return -1;
 }
 
-#endif
 
-#if LIGHT_DEVICE
-/******************************************************************************
- * FunctionName : light_status_get
- * Description  : set up the device status as a JSON format
- * Parameters   : pcjson -- A pointer to a JSON object
- * Returns      : result
-PwmTree {
-"period":1000,
-"rgb":{
-"red":62152,
-"green":65530,
-"blue":62152
-}
-} 
-*******************************************************************************/
-
-LOCAL int  
-light_status_get(cJSON *pcjson, const char* pname )
-{
-
-    cJSON_AddNumberToObject(pcjson, "period", user_light_get_period());
-
-    cJSON * pSubJson_rgb= cJSON_CreateObject();
-    if(NULL == pSubJson_rgb){
-        printf("pSubJson_rgb creat fail\n");
-        return -1;
-    }
-    cJSON_AddItemToObject(pcjson, "rgb", pSubJson_rgb);
-
-    cJSON_AddNumberToObject(pSubJson_rgb, "red", user_light_get_duty(LIGHT_RED));
-    cJSON_AddNumberToObject(pSubJson_rgb, "green", user_light_get_duty(LIGHT_GREEN));
-    cJSON_AddNumberToObject(pSubJson_rgb, "blue", user_light_get_duty(LIGHT_GREEN));
-    cJSON_AddNumberToObject(pSubJson_rgb, "cwhite", (PWM_CHANNEL>LIGHT_COLD_WHITE?user_light_get_duty(LIGHT_COLD_WHITE):0));
-    cJSON_AddNumberToObject(pSubJson_rgb, "wwhite", (PWM_CHANNEL>LIGHT_WARM_WHITE?user_light_get_duty(LIGHT_WARM_WHITE):0));
-
-    return 0;
-}
-
-/******************************************************************************
- * FunctionName : light_status_get
- * Description  : set up the device status as a JSON format
- * Parameters   : pcjson -- A pointer to a JSON formatted string
- * Returns      : result
-*******************************************************************************/
-
-LOCAL int  
-light_status_set(const char *pValue)
-{
-    static uint32 r,g,b,cw,ww,period;
-    period = 1000;
-    cw=0;
-    ww=0;
-    extern uint8 light_sleep_flg;
-    u8 flag = 0;
-
-    cJSON * pJson;
-    cJSON * pJsonSub;
-    cJSON * pJsonSub_freq;
-    cJSON * pJsonSub_rgb;
-
-    pJson =  cJSON_Parse(pValue);
-    if(NULL == pJson){
-        printf("light_status_set cJSON_Parse fail\n");
-        return -1;
-    }
-    
-    pJsonSub_rgb = cJSON_GetObjectItem(pJson, "rgb");
-    if(NULL != pJsonSub_rgb){
-        if(pJsonSub_rgb->type == cJSON_Object){
-
-            pJsonSub = cJSON_GetObjectItem(pJsonSub_rgb, "red");
-            if(NULL != pJsonSub){
-                if(pJsonSub->type == cJSON_Number){
-                    r = pJsonSub->valueint;
-                }else{
-                    flag = 1;
-                    printf("light_req_parse red type error!\n");
-                }
-            }else{
-                flag = 1;
-                printf("GetObjectItem red failed!\n");
-            }
-
-            pJsonSub = cJSON_GetObjectItem(pJsonSub_rgb, "green");
-            if(NULL != pJsonSub){
-                if(pJsonSub->type == cJSON_Number){
-                    g = pJsonSub->valueint;
-                }else{
-                    flag = 1;
-                    printf("light_req_parse green type error!\n");
-                }
-            }else{
-                flag = 1;
-                printf("GetObjectItem green failed!\n");
-            }
-            
-            pJsonSub = cJSON_GetObjectItem(pJsonSub_rgb, "blue");
-            if(NULL != pJsonSub){
-                if(pJsonSub->type == cJSON_Number){
-                    b = pJsonSub->valueint;
-                }else{
-                    flag = 1;
-                    printf("light_req_parse blue type error!\n");
-                }
-            }else{
-                flag = 1;
-                printf("GetObjectItem blue failed!\n");
-            }
-
-            pJsonSub = cJSON_GetObjectItem(pJsonSub_rgb, "cwhite");
-            if(NULL != pJsonSub){
-                if(pJsonSub->type == cJSON_Number){
-                    cw = pJsonSub->valueint;
-                }else{
-                    flag = 1;
-                    printf("light_req_parse cwhite type error!\n");
-                }
-            }else{
-                //printf("GetObjectItem no cwhite!\n");
-            }
-            
-            pJsonSub = cJSON_GetObjectItem(pJsonSub_rgb, "wwhite");
-            if(NULL != pJsonSub){
-                if(pJsonSub->type == cJSON_Number){
-                    ww = pJsonSub->valueint;
-                }else{
-                    flag = 1;
-                    printf("light_req_parse wwhite type error!\n");
-                }
-            }else{
-                //printf("GetObjectItem no wwhite !\n");
-            }
-
-        }
-    }
-    
-    pJsonSub_freq = cJSON_GetObjectItem(pJson, "period");
-    if(NULL != pJsonSub_freq){
-        if(pJsonSub_freq->type == cJSON_Number){
-            period = pJsonSub_freq->valueint;
-        }else{
-            flag = 1;
-            printf("light_req_parse period type error!\n");
-        }
-    }else{
-        flag = 1;
-        printf("GetObjectItem period failed!\n");
-    }
-
-    /*this item is optional*/
-    pJsonSub = cJSON_GetObjectItem(pJson, "response");
-    if(NULL != pJsonSub){
-        if(pJsonSub->type == cJSON_Number){
-            //PostCmdNeeRsp = pJsonSub->valueint;
-            //printf("LIGHT response:%u\n",PostCmdNeeRsp);
-        }else{
-            flag = 1;
-            printf("ERROR:light_req_parse cwhite type error!\n");
-        }
-    }
-
-    if(0 == flag){
-        if((r|g|b|ww|cw) == 0){
-            if(light_sleep_flg==0){
-                /*entry sleep mode?*/
-            }
-            
-        }else{
-            if(light_sleep_flg==1){
-                printf("modem sleep en\r\n");
-                //wifi_set_sleep_type(MODEM_SLEEP_T);
-                light_sleep_flg =0;
-            }
-        }
-        
-        light_set_aim(r,g,b,cw,ww,period);
-    }
-    
-    cJSON_Delete(pJson);
-    return 0;
-}
-
-#endif
-
-
-#if SENSOR_DEVICE
-LOCAL int  
-user_set_sleep(const char *pValue)
-{
-    printf("user_set_sleep %s \n", pValue);
-    
-    return 0;
-}
-#else
 LOCAL int  
 user_set_reboot(const char *pValue)
 {
@@ -496,40 +330,15 @@ user_set_reboot(const char *pValue)
     
     return 0;
 }
-#endif
-
 
 LOCAL int  
 system_status_reset(const char *pValue)
 {
     printf("system_status_reset %s \n", pValue);
-    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
-        if (tSmartSocketEventList.unValidation != 0xA5A5A5A5){
-        	memset(&tSmartSocketEventList, 0, sizeof(tSmartSocketEventList));
-        	tSmartSocketEventList.unValidation = 0xA5A5A5A5;
-        	system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY),
-        			&tSmartSocketEventList, sizeof(tSmartSocketEventList));
-        }
-        xSemaphoreGive(xSmartSocketEventListSemaphore);
-    }
+    DAT_nFlashDataClean();
     return 0;
 }
 
-LOCAL int  
-user_upgrade_start(const char *pValue)
-{
-    printf("user_upgrade_start %s \n", pValue);
-    
-    return 0;
-}
-
-LOCAL int  
-user_upgrade_reset(const char *pValue)
-{
-    printf("user_upgrade_reset %s \n", pValue);
-    
-    return 0;
-}
 /******************************************************************************
  * FunctionName : restart_10ms_cb
  * Description  : system restart or wifi reconnected after a certain time.
@@ -568,12 +377,6 @@ restart_xms_cb(void *arg)
 
             case DEEP_SLEEP:
             case REBOOT:
-#if SENSOR_DEVICE
-                wifi_set_opmode(STATION_MODE);
-                if (rstparm->parmtype == DEEP_SLEEP) {
-                    system_deep_sleep(SENSOR_DEEP_SLEEP_TIME);
-                }
-#endif
                 break;
 
             default:
@@ -974,44 +777,6 @@ scan_result_output(cJSON *pcjson, bool total)
 }
 
 /******************************************************************************
- * FunctionName : scan_info_get
- * Description  : set up the scan data as a JSON format
- * Parameters   : pcjson -- A pointer to a JSON object
- * Returns      : result
-*******************************************************************************/
-LOCAL int  
-scan_info_get(cJSON *pcjson, const char* pname)
-{
-
-    //printf("scan_info_get pscaninfo->totalpage %d\n",pscaninfo->totalpage);
-    cJSON * pSubJson_Response= cJSON_CreateObject();
-    if(NULL == pSubJson_Response){
-        printf("pSubJson_Response creat fail\n");
-        return -1;
-    }
-    cJSON_AddItemToObject(pcjson, "Response", pSubJson_Response);
-
-    cJSON_AddNumberToObject(pSubJson_Response, "TotalPage", pscaninfo->totalpage);
-
-
-    cJSON_AddNumberToObject(pSubJson_Response, "PageNum", pscaninfo->pagenum);
-
-    cJSON * pSubJson_ScanResult= cJSON_CreateArray();
-    if(NULL == pSubJson_ScanResult){
-        printf("pSubJson_ScanResult creat fail\n");
-        return -1;
-    }
-    cJSON_AddItemToObject(pSubJson_Response, "ScanResult", pSubJson_ScanResult);
-
-    if(0 != scan_result_output(pSubJson_ScanResult,0)){
-        printf("scan_result_print fail\n");
-        return -1;
-    }
-
-    return 0;
-}
-
-/******************************************************************************
  * FunctionName : device_get
  * Description  : set up the device information parmer as a JSON format
  * Parameters   : pcjson -- A pointer to a JSON object
@@ -1047,20 +812,14 @@ typedef struct {
 } EspCgiApiEnt;
 
 const EspCgiApiEnt espCgiApiNodes[]={
-#if PLUG_DEVICE
+
     {"config", "switch", switch_status_get, switch_status_set},
 	{"client", "current", current_value_get,NULL},
+	{"client", "voltage", voltage_value_get,NULL},
+	{"client", "power", power_value_get,NULL},
 	{"client", "temperature", temperature_value_get,NULL},
 	{"client", "event", event_history_get,NULL},
-#elif LIGHT_DEVICE
-    {"config", "light", light_status_get,light_status_set},
-#endif
-    
-#if SENSOR_DEVICE
-    {"config", "sleep", NULL,user_set_sleep},
-#else
     {"config", "reboot", NULL,user_set_reboot},
-#endif
     {"config", "wifi", wifi_info_get,wifi_info_set},
 //    {"client", "scan",  scan_info_get, NULL},
     {"client", "status", connect_status_get, NULL},
