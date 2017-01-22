@@ -71,6 +71,7 @@ LOCAL uint8 iot_version[20];
 
 LOCAL struct client_conn_param client_param;
 
+extern SmartSocketParameter_t tSmartSocketParameter;
 
 /******************************************************************************
  * FunctionName : smartconfig_done
@@ -501,9 +502,9 @@ user_esp_platform_maintainer(void *pvParameters)
         }
 //    }
 
-        sntp_setservername(0,"cn.pool.ntp.org");
-        sntp_setservername(1,"asia.pool.ntp.org");
-        sntp_setservername(2,"pool.ntp.org");
+        sntp_setservername(0, tSmartSocketParameter.cSNTP_Server[0]);
+        sntp_setservername(1, tSmartSocketParameter.cSNTP_Server[1]);
+        sntp_setservername(2, tSmartSocketParameter.cSNTP_Server[2]);
         sntp_init();
 
 //Local_mode:

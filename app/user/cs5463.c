@@ -162,7 +162,8 @@ trend_record_callback(void *arg)
 	tValue.fCurrent = fCS5463_I;
 	tValue.fVoltage = fCS5463_V;
 	tValue.fPower = fCS5463_P;
-    trend_record_add(sntp_get_current_timestamp(), tValue);
+	tValue.unTime = sntp_get_current_timestamp();
+    DAT_bTrendRecordAdd(tValue);
 }
 
 void CS5463_Manager(void *pvParameters)
@@ -180,7 +181,7 @@ void CS5463_Manager(void *pvParameters)
 
     os_timer_disarm(&tTrendRecord);
     os_timer_setfn(&tTrendRecord, trend_record_callback , NULL);
-    os_timer_arm(&tTrendRecord, 5000, 1);
+    os_timer_arm(&tTrendRecord, TREND_RECORD_INTERVAL, 1);
 
 	while(1){
 		// Temperature

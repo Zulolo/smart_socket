@@ -18,7 +18,15 @@
 
 #define EVENT_HISTORY_MAX_RECORD_NUM	32
 #define MAX_SIGNED_INT_16_VALUE			0x8000
-#define MAX_TREND_RECORD_SIZE			0x100000
+#define MAX_TREND_RECORD_SECTOR			256
+#define MAX_TREND_RECORD_SIZE			(FLASH_SECTOR_SIZE * MAX_TREND_RECORD_SECTOR)
+#define TREND_RECORD_NUM_PER_SECTOR		((FLASH_SECTOR_SIZE)/sizeof(TrendContent_t))
+#define MAX_TREND_RECORD_NUM			((TREND_RECORD_NUM_PER_SECTOR)*(MAX_TREND_RECORD_SECTOR))
+#define TREND_RECORD_INTERVAL			5000	// ms
+#define MAX_TREND_NUM_PER_QUERY			10
+#define MAX_TREND_QUERY_LEN				((TREND_RECORD_INTERVAL / 1000) * MAX_TREND_NUM_PER_QUERY)
+
+#define MAX_SNTP_SERVER_ADDR_LEN		64
 
 typedef enum{
 	USER_DATA_EVENT_HISTORY = 0,	// event history
@@ -49,9 +57,9 @@ typedef enum{
 }UserLinkLedPattern_t;
 
 typedef struct SmartSocketEvent{
-    uint64 unTime;	// UTC seconds
+    uint32 unTime;	// UTC seconds
     EventType_t tEventType;
-    uint64_t data;
+    uint32_t data;
 }SmartSocketEvent_t;
 
 typedef struct SmartSocketEventList {
@@ -66,8 +74,8 @@ typedef struct SmartSocketParameter{
 		uint32 bTrendEnable : 1;
 		uint32 unused : 30;
 	}tConfigure;
+	char cSNTP_Server[3][MAX_SNTP_SERVER_ADDR_LEN];
 	uint32 unTrendRecordNum;
-	uint32 unTrendIndex;
 	uint32 unValidation;	//TODO: use CRC of tEvent array data
 }SmartSocketParameter_t;
 

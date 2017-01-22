@@ -128,7 +128,8 @@ system_info_get(cJSON *pcjson, const char* pname )
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
-"current":3.2}}
+"voltage":3.2,
+"unit":"V"}}
 *******************************************************************************/
 LOCAL int
 current_value_get(cJSON *pcjson, const char* pname )
@@ -180,7 +181,8 @@ voltage_value_get(cJSON *pcjson, const char* pname )
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
-"current":3.2}}
+"power":3.2,
+"unit":"W"}}
 *******************************************************************************/
 LOCAL int
 power_value_get(cJSON *pcjson, const char* pname )
@@ -224,6 +226,75 @@ temperature_value_get(cJSON *pcjson, const char* pname )
     cJSON_AddNumberToObject(pSubJson_response, "temperature", CS5463_fGetTemperature());
     cJSON_AddStringToObject(pSubJson_response, "unit", "C");
     return 0;
+}
+
+/******************************************************************************
+ * FunctionName : trend_get
+ * Description  : set up trend as a JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"trend":{"time":145879,
+"type":3,
+"data":1}}
+*******************************************************************************/
+LOCAL int
+trend_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJsonEvent;
+    uint32_t unStartTime, unEndTime;
+    TrendContent_t* pTrendContent;
+    uint8_t unTrendRecordNum, unTrendRecordIndex;
+
+//    printf("Get event history.\n");
+    if (sscanf(pname, "%u,%u", &unStartTime, &unEndTime) != 2){
+        printf("Trend select time frame format error.\n");
+        return (-1);
+    }
+
+    // Get oldest and latest record time
+    if ((0 == unStartTime) && (0 == unEndTime)){
+    	if (DAT_nGetTrendLength(&unStartTime, &unEndTime) < 0){
+    		printf("Get trend length error.\n");
+    		return (-1);
+    	}else{
+    		pSubJsonEvent = cJSON_CreateObject();
+    	    if(NULL == pSubJsonEvent){
+    	        printf("pSubJsonEvent creat fail\n");
+    	        return (-1);
+    	    }
+    		cJSON_AddItemToObject(pcjson, "trendLength", pSubJsonEvent);
+            cJSON_AddNumberToObject(pSubJsonEvent, "startTime", unStartTime);
+            cJSON_AddNumberToObject(pSubJsonEvent, "endTime", unEndTime);
+            return 0;
+    	}
+    }
+
+    if (unEndTime <= unStartTime){
+		printf("End time can not early than start time.\n");
+		return -1;
+    }
+    // Get trend record, only return max MAX_TREND_NUM_PER_QUERY
+    if ((unEndTime - unStartTime) > MAX_TREND_QUERY_LEN){
+    	unStartTime = unEndTime - MAX_TREND_QUERY_LEN;
+    }
+    pTrendContent = DAT_pGetTrends(unStartTime, unEndTime, &unTrendRecordNum);
+    if ((NULL == pTrendContent) || (0 == unTrendRecordNum)){
+    	printf("Get record failed.\n");
+    	return (-1);
+    }else{
+    	for (unTrendRecordIndex = 0; unTrendRecordIndex < unTrendRecordNum; unTrendRecordIndex++){
+    		pSubJsonEvent = cJSON_CreateObject();
+			if(NULL == pSubJsonEvent){
+				printf("pSubJsonEvent creat fail\n");
+				return (-1);
+			}
+    		cJSON_AddItemToObject(pcjson, "trend", pSubJsonEvent);
+            cJSON_AddNumberToObject(pSubJsonEvent, "time", pTrendContent[unTrendRecordIndex].unTime);
+            cJSON_AddNumberToObject(pSubJsonEvent, "power", pTrendContent[unTrendRecordIndex].fPower);
+    	}
+    	free(pTrendContent);
+    	return 0;
+    }
 }
 
 /******************************************************************************
@@ -818,6 +889,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"client", "voltage", voltage_value_get,NULL},
 	{"client", "power", power_value_get,NULL},
 	{"client", "temperature", temperature_value_get,NULL},
+	{"client", "trend", trend_get,NULL},
 	{"client", "event", event_history_get,NULL},
     {"config", "reboot", NULL,user_set_reboot},
     {"config", "wifi", wifi_info_get,wifi_info_set},
