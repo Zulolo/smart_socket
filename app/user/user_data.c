@@ -30,6 +30,7 @@ int32_t DAT_nFlashDataClean(void)
 	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
 		memset(&tSmartSocketParameter, 0, sizeof(tSmartSocketParameter));
 		tSmartSocketParameter.unValidation = 0xA5A5A5A5;
+		tSmartSocketParameter.tConfigure.bButtonRelayEnable = 1;
 		memcpy(tSmartSocketParameter.cSNTP_Server[0], "cn.pool.ntp.org", sizeof("cn.pool.ntp.org"));
 		memcpy(tSmartSocketParameter.cSNTP_Server[1], "asia.pool.ntp.org", sizeof("asia.pool.ntp.org"));
 		memcpy(tSmartSocketParameter.cSNTP_Server[2], "pool.ntp.org", sizeof("pool.ntp.org"));

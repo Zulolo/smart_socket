@@ -192,12 +192,12 @@ void CS5463_Manager(void *pvParameters)
 
 		// Current
 		CS5463IF_Read(CS5463_CMD_RD_I, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_I = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		fCS5463_I = (float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Voltage
 		CS5463IF_Read(CS5463_CMD_RD_V, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_V = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		fCS5463_V = (float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Power
