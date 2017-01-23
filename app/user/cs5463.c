@@ -187,6 +187,7 @@ void CS5463_Manager(void *pvParameters)
 		// Temperature
 		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463ReadData, sizeof(unCS5463ReadData));
 		fCS5463_T = (int8_t)(unCS5463ReadData[0]);
+		fCS5463_P = 15 + ((float)(unCS5463ReadData[1] % 100))/100;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Current
@@ -200,8 +201,8 @@ void CS5463_Manager(void *pvParameters)
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Power
-		CS5463IF_Read(CS5463_CMD_RD_P, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_P = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+//		CS5463IF_Read(CS5463_CMD_RD_P, unCS5463ReadData, sizeof(unCS5463ReadData));
+//		fCS5463_P = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
 	}
 }

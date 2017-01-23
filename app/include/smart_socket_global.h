@@ -72,7 +72,8 @@ typedef struct SmartSocketParameter{
 	{
 		uint32 bButtonRelayEnable : 1;
 		uint32 bTrendEnable : 1;
-		uint32 unused : 30;
+		uint32 bReSmartConfig : 1;
+		uint32 unused : 29;
 	}tConfigure;
 	char cSNTP_Server[3][MAX_SNTP_SERVER_ADDR_LEN];
 	uint32 unTrendRecordNum;

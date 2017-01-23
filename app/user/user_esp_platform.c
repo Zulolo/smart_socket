@@ -516,10 +516,21 @@ user_esp_platform_maintainer(void *pvParameters)
 //    vQueueDelete(QueueStop);
 //    QueueStop = NULL;
     while(1){
-        unSNTPTime = sntp_get_current_timestamp();
-        os_printf("time:%d\r\n",unSNTPTime);
-        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
-    	vTaskDelay(2000/portTICK_RATE_MS);
+//        unSNTPTime = sntp_get_current_timestamp();
+//        os_printf("time:%d\r\n",unSNTPTime);
+//        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
+    	if (1 == tSmartSocketParameter.tConfigure.bReSmartConfig){
+    		device_status = DEVICE_CONNECTING;
+
+            wifi_station_disconnect();
+
+//            wifi_station_set_config(sta_conf);
+
+//    		smartconfig_stop();
+    		startSmartConfig();
+    		tSmartSocketParameter.tConfigure.bReSmartConfig = 0;
+    	}
+    	vTaskDelay(1000/portTICK_RATE_MS);
     }
     printf("user_esp_platform_maintainer task end.\n");
     vTaskDelete(NULL);

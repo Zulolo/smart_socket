@@ -49,6 +49,8 @@
 
 	#define RELAY_CLOSE()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 1)
 	#define RELAY_OPEN()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 0)
+
+	#define RELAY_GET_STATE()		((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(1):(0))
 #else
 	#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO4_U
 	#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO4
@@ -75,9 +77,12 @@
 
 	#define RELAY_CLOSE()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 0)
 	#define RELAY_OPEN()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 1)
+
+	#define RELAY_GET_STATE()		((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(0):(1))
 #endif
 
-#define RELAY_GET_STATE()	((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(1):(0))
+#define PLUG_LINK_LED_OFF		GPIO_OUTPUT_SET(PLUG_LINK_LED_PIN_NUM, 1)
+#define PLUG_LINK_LED_ON		GPIO_OUTPUT_SET(PLUG_LINK_LED_PIN_NUM, 0)
 
 #define RELAY_CLOSE_VALUE	1
 #define RELAY_OPEN_VALUE	0
@@ -87,12 +92,12 @@ LOCAL struct keys_param keys;
 LOCAL struct single_key_param *user_key[PLUG_USER_KEY_NUM];
 LOCAL os_timer_t link_led_timer;
 LOCAL uint8 link_led_level = 0;
-LOCAL uint8 device_status;
-
+//LOCAL uint8 device_status;
+SmartSocketParameter_t tSmartSocketParameter;
 //extern bool smartconfig_start(sc_callback_t cb, ...);
 //extern bool smartconfig_stop(void);
 //extern void ICACHE_FLASH_ATTR smartconfig_done(sc_status status, void *pdata);
-extern void startSmartConfig(void);
+//extern void startSmartConfig(void);
 
 /******************************************************************************
  * FunctionName : user_plug_get_status
@@ -120,7 +125,6 @@ user_plug_set_status(bool status)
 		return;
 	}
 //	printf("status input! %d\n", status);
-
 	if (RELAY_CLOSE_VALUE == status){
 		RELAY_CLOSE();
 		RELAY_LED_ON();
@@ -130,6 +134,7 @@ user_plug_set_status(bool status)
 		RELAY_LED_OFF();
 		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
 	}
+
 }
 
 /******************************************************************************
@@ -154,7 +159,9 @@ LOCAL void
 user_plug_short_press(void)
 {
 	printf("Short press!\n");
-	user_plug_toggle_status();
+	if (1 == tSmartSocketParameter.tConfigure.bButtonRelayEnable){
+		user_plug_toggle_status();
+	}
 }
 
 /******************************************************************************
@@ -167,9 +174,7 @@ LOCAL void
 user_plug_long_press(void)
 {
 	printf("Long press!\n");
-	smartconfig_stop();
-
-	startSmartConfig();
+	tSmartSocketParameter.tConfigure.bReSmartConfig = 1;
 }
 
 /******************************************************************************
@@ -190,6 +195,8 @@ user_link_led_init(void)
 	io_out_conf.GPIO_Pin = PLUG_LINK_LED_IO_PIN ;
 	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
 	gpio_config(&io_out_conf);
+
+	PLUG_LINK_LED_OFF;
 }
 
 LOCAL void  
@@ -230,12 +237,12 @@ user_link_led_output(UserLinkLedPattern_t tPattern)
     switch (tPattern) {
         case LED_OFF:
             os_timer_disarm(&link_led_timer);
-            GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_PIN_NUM), 1);
+            PLUG_LINK_LED_OFF;
             break;
 
         case LED_ON:
             os_timer_disarm(&link_led_timer);
-            GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_PIN_NUM), 0);
+            PLUG_LINK_LED_ON;
             break;
 
         case LED_1HZ:

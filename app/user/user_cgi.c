@@ -46,7 +46,9 @@ typedef struct _scaninfo {
 LOCAL scaninfo *pscaninfo;
 
 extern xSemaphoreHandle xSmartSocketEventListSemaphore;
+extern xSemaphoreHandle xSmartSocketParameterSemaphore;
 extern SmartSocketEventList_t tSmartSocketEventList;
+extern SmartSocketParameter_t tSmartSocketParameter;
 
 LOCAL os_timer_t *restart_xms;
 LOCAL rst_parm *rstparm;
@@ -106,7 +108,7 @@ system_info_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "Device", pSubJson_Device);
 
-    cJSON_AddStringToObject(pSubJson_Version,"hardware","0.1");
+    cJSON_AddStringToObject(pSubJson_Version,"hardware","0.2");
     cJSON_AddStringToObject(pSubJson_Version,"sdk_version",system_get_sdk_version());
     sprintf(buff,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
     IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
@@ -328,8 +330,116 @@ event_history_get(cJSON *pcjson, const char* pname )
 }
 
 /******************************************************************************
- * FunctionName : status_get
- * Description  : set up the device status as a JSON format
+ * FunctionName : manual_enable_get
+ * Description  : get if button control relay is enabled or not
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{
+"enable":0}}
+*******************************************************************************/
+LOCAL int
+manual_enable_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response creat fail\n");
+        return -1;
+    }
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "enable", tSmartSocketParameter.tConfigure.bButtonRelayEnable);
+
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : manual_enable_set
+ * Description  : enable or disable button control relay
+ * Parameters   : pcjson -- A pointer to a JSON formatted string
+ * Returns      : result
+ {"Response":
+ {"status":1 }}
+*******************************************************************************/
+LOCAL int
+manual_enable_set(const char *pValue)
+{
+    cJSON * pJsonSub=NULL;
+    cJSON * pJsonSub_enable=NULL;
+
+    cJSON * pJson = cJSON_Parse(pValue);
+
+    if(NULL != pJson){
+        pJsonSub = cJSON_GetObjectItem(pJson, "set");
+    }
+
+    if(NULL != pJsonSub){
+        pJsonSub_enable = cJSON_GetObjectItem(pJsonSub, "enable");
+    }
+
+    if(NULL != pJsonSub_enable){
+        if(pJsonSub_enable->type == cJSON_Number){
+        	tSmartSocketParameter.tConfigure.bButtonRelayEnable = pJsonSub_enable->valueint;
+            if(NULL != pJson){
+            	cJSON_Delete(pJson);
+            }
+        	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+        		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+        							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+        		xSemaphoreGive(xSmartSocketParameterSemaphore);
+        	}else{
+        		printf("Take parameter semaphore failed.\n");
+        		return (-1);
+        	}
+            return 0;
+        }
+    }
+
+    if(NULL != pJson)cJSON_Delete(pJson);
+    printf("switch_status_set fail\n");
+    return (-1);
+}
+
+/******************************************************************************
+ * FunctionName : debug_smart_config
+ * Description  : re-start smart config, only used for debug
+ * Parameters   : pcjson -- A pointer to a JSON formatted string
+ * Returns      : result
+ {"Response":
+ {"status":1 }}
+*******************************************************************************/
+LOCAL int
+debug_smart_config(const char *pValue)
+{
+    cJSON * pJsonSub=NULL;
+    cJSON * pJsonSub_enable=NULL;
+
+    cJSON * pJson = cJSON_Parse(pValue);
+
+    if(NULL != pJson){
+        pJsonSub = cJSON_GetObjectItem(pJson, "set");
+    }
+
+    if(NULL != pJsonSub){
+        pJsonSub_enable = cJSON_GetObjectItem(pJsonSub, "enable");
+    }
+
+    if(NULL != pJsonSub_enable){
+        if(pJsonSub_enable->type == cJSON_Number){
+        	tSmartSocketParameter.tConfigure.bReSmartConfig = pJsonSub_enable->valueint;
+            if(NULL != pJson){
+            	cJSON_Delete(pJson);
+            }
+            return 0;
+        }
+    }
+
+    if(NULL != pJson)cJSON_Delete(pJson);
+    printf("switch_status_set fail\n");
+    return (-1);
+}
+/******************************************************************************
+ * FunctionName : switch_status_get
+ * Description  : get relay status
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
@@ -349,9 +459,10 @@ switch_status_get(cJSON *pcjson, const char* pname )
 
     return 0;
 }
+
 /******************************************************************************
- * FunctionName : status_set
- * Description  : parse the device status parmer as a JSON format
+ * FunctionName : switch_status_set
+ * Description  : set relay to close or open
  * Parameters   : pcjson -- A pointer to a JSON formatted string
  * Returns      : result
  {"Response":
@@ -366,7 +477,7 @@ switch_status_set(const char *pValue)
     cJSON * pJson =  cJSON_Parse(pValue);
 
     if(NULL != pJson){
-        pJsonSub = cJSON_GetObjectItem(pJson, "response");
+        pJsonSub = cJSON_GetObjectItem(pJson, "set");
     }
     
     if(NULL != pJsonSub){
@@ -375,13 +486,6 @@ switch_status_set(const char *pValue)
     
     if(NULL != pJsonSub_status){
         if(pJsonSub_status->type == cJSON_Number){
-//        	if (RELAY_CLOSE_VALUE == pJsonSub_status->valueint){
-//        		RELAY_CLOSE();
-//        		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
-//        	}else if(RELAY_OPEN_VALUE == pJsonSub_status->valueint){
-//        		RELAY_OPEN();
-//        		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
-//        	}
             user_plug_set_status(pJsonSub_status->valueint);
             if(NULL != pJson)cJSON_Delete(pJson);
             return 0;
@@ -885,6 +989,8 @@ typedef struct {
 const EspCgiApiEnt espCgiApiNodes[]={
 
     {"config", "switch", switch_status_get, switch_status_set},
+	{"config", "manual", manual_enable_get, manual_enable_set},
+	{"config", "debug", NULL, debug_smart_config},
 	{"client", "current", current_value_get,NULL},
 	{"client", "voltage", voltage_value_get,NULL},
 	{"client", "power", power_value_get,NULL},
