@@ -421,8 +421,9 @@ exception (%d): \n",rtc_info.reason,rtc_info.epc1,rtc_info.epc2,rtc_info.epc3,rt
 
 void startSmartConfig(void)
 {
-	printf("No previous AP record found, enter smart config. \n");
+//	printf("No previous AP record found, enter smart config. \n");
 	wifi_set_opmode(STATION_MODE);
+	smartconfig_stop();
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
 
 	while(device_status != DEVICE_GOT_IP){
