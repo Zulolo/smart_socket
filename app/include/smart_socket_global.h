@@ -27,6 +27,9 @@
 #define MAX_TREND_QUERY_LEN				((TREND_RECORD_INTERVAL / 1000) * MAX_TREND_NUM_PER_QUERY)
 
 #define MAX_SNTP_SERVER_ADDR_LEN		64
+#define RELAY_SCHEDULE_NUM				4
+#define RELAY_SCHEDULE_MAX_SEC_DAY		(24*60*60)
+#define RELAY_SCHEDULE_MIN_CLOSE_TIME	5
 
 typedef enum{
 	USER_DATA_EVENT_HISTORY = 0,	// event history
@@ -67,15 +70,22 @@ typedef struct SmartSocketEventList {
     SmartSocketEvent_t tEvent[EVENT_HISTORY_MAX_RECORD_NUM];
 }SmartSocketEventList_t;
 
+typedef struct RelaySchedule{
+	uint32 unRelayCloseTime;
+	uint32 unRelayOpenTime;
+}RelaySchedule_t;
+
 typedef struct SmartSocketParameter{
 	struct
 	{
 		uint32 bButtonRelayEnable : 1;
 		uint32 bTrendEnable : 1;
 		uint32 bReSmartConfig : 1;
-		uint32 unused : 29;
+		uint32 bRelayScheduleEnable : 1;
+		uint32 unused : 28;
 	}tConfigure;
 	char cSNTP_Server[3][MAX_SNTP_SERVER_ADDR_LEN];
+	RelaySchedule_t tRelaySchedule[RELAY_SCHEDULE_NUM];
 	uint32 unTrendRecordNum;
 	uint32 unValidation;	//TODO: use CRC of tEvent array data
 }SmartSocketParameter_t;

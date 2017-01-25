@@ -45,9 +45,9 @@ typedef struct _scaninfo {
 } scaninfo;
 LOCAL scaninfo *pscaninfo;
 
-extern xSemaphoreHandle xSmartSocketEventListSemaphore;
+//extern xSemaphoreHandle xSmartSocketEventListSemaphore;
 extern xSemaphoreHandle xSmartSocketParameterSemaphore;
-extern SmartSocketEventList_t tSmartSocketEventList;
+//extern SmartSocketEventList_t tSmartSocketEventList;
 extern SmartSocketParameter_t tSmartSocketParameter;
 
 LOCAL os_timer_t *restart_xms;
@@ -234,21 +234,23 @@ temperature_value_get(cJSON *pcjson, const char* pname )
  * FunctionName : trend_get
  * Description  : set up trend as a JSON format
  * Parameters   : pcjson -- A pointer to a JSON object
+ * Parameters   : pname -- "command=trend&start_time=2233&end_time=4455"
+ * (http://192.168.1.130/client?command=trend&start_time=2233&end_time=4455)
  * Returns      : result
 {"trend":{"time":145879,
 "type":3,
 "data":1}}
 *******************************************************************************/
 LOCAL int
-trend_get(cJSON *pcjson, const char* pname )
+trend_get(cJSON *pcjson, const char* pname)
 {
     cJSON * pSubJsonEvent;
     uint32_t unStartTime, unEndTime;
     TrendContent_t* pTrendContent;
     uint8_t unTrendRecordNum, unTrendRecordIndex;
 
-//    printf("Get event history.\n");
-    if (sscanf(pname, "%u,%u", &unStartTime, &unEndTime) != 2){
+//    printf("Get trend:%s.\n", pname);
+    if (sscanf(pname, "command=trend&start_time=%u&end_time=%u", &unStartTime, &unEndTime) != 2){
         printf("Trend select time frame format error.\n");
         return (-1);
     }
@@ -665,6 +667,166 @@ wifi_softap_get(cJSON *pcjson)
 }
 
 /******************************************************************************
+ * FunctionName : relay_schedule_set
+ * Description  : set relay schedule
+ * Parameters   : pcjson -- A pointer to a JSON formated string
+ * Returns      : result
+ * {"set":{"schedule":{"index":0,"close_time":3248,"open_time":3456}}}
+ * {"set":{"enable":1}}
+*******************************************************************************/
+LOCAL int
+relay_schedule_set(const char* pValue)
+{
+	cJSON * pJson;
+	cJSON * pJsonSub;
+	cJSON * pJsonSubSet;
+	cJSON * pJsonSubIndex;
+	cJSON * pJsonSubCloseTime;
+	cJSON * pJsonSubOpenTime;
+	uint8_t unIndex;
+	uint32_t unCloseTime;
+	uint32_t unOpenTime;
+
+    pJson = cJSON_Parse(pValue);
+    if(NULL == pJson){
+        printf("wifi_info_set cJSON_Parse fail\n");
+        return (-1);
+    }
+
+    pJsonSubSet = cJSON_GetObjectItem(pJson, "set");
+    if(pJsonSubSet == NULL) {
+        printf("cJSON_GetObjectItem pJsonSubSet fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "schedule")) != NULL){
+        pJsonSubIndex= cJSON_GetObjectItem(pJsonSub, "index");
+        if(NULL == pJsonSubIndex){
+            printf("cJSON_GetObjectItem pJsonSubIndex fail.\n");
+            cJSON_Delete(pJson);
+            return (-1);
+        }else{
+        	if ((pJsonSubIndex->valueint < 0) || (pJsonSubIndex->valueint >= RELAY_SCHEDULE_NUM)){
+                printf("Schedule index error.\n");
+                cJSON_Delete(pJson);
+                return (-1);
+        	}else{
+        		unIndex = pJsonSubIndex->valueint;
+        	}
+        }
+
+        pJsonSubCloseTime = cJSON_GetObjectItem(pJsonSub,"close_time");
+        if(NULL == pJsonSubCloseTime){
+			printf("cJSON_GetObjectItem pJsonSubCloseTime fail\n");
+			cJSON_Delete(pJson);
+			return (-1);
+		}else{
+        	if ((pJsonSubCloseTime->valueint < 0) || (pJsonSubCloseTime->valueint >= RELAY_SCHEDULE_MAX_SEC_DAY)){
+                printf("Schedule close time error.\n");
+                cJSON_Delete(pJson);
+                return (-1);
+        	}else{
+        		unCloseTime = pJsonSubCloseTime->valueint;
+        	}
+        }
+
+        pJsonSubOpenTime = cJSON_GetObjectItem(pJsonSub,"open_time");
+        if(NULL == pJsonSubOpenTime){
+			printf("cJSON_GetObjectItem pJsonSubOpenTime fail\n");
+			cJSON_Delete(pJson);
+			return (-1);
+		}else{
+        	if ((pJsonSubOpenTime->valueint < 0) || (pJsonSubOpenTime->valueint >= RELAY_SCHEDULE_MAX_SEC_DAY) ||
+        			(pJsonSubOpenTime->valueint <= (unCloseTime + RELAY_SCHEDULE_MIN_CLOSE_TIME))){
+                printf("Schedule open time error.\n");
+                cJSON_Delete(pJson);
+                return (-1);
+        	}else{
+        		unOpenTime = pJsonSubOpenTime->valueint;
+        	}
+        }
+    	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayCloseTime = unCloseTime;
+    	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayOpenTime = unOpenTime;
+    	cJSON_Delete(pJson);
+    	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+    		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+    							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+    		xSemaphoreGive(xSmartSocketParameterSemaphore);
+    		return 0;
+    	}else{
+    		printf("Take parameter semaphore failed.\n");
+    		return (-1);
+    	}
+    }
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "enable")) != NULL){
+		if ((pJsonSub->valueint != 0) && (pJsonSub->valueint != 1)){
+            printf("Schedule enable value error\n");
+            cJSON_Delete(pJson);
+            return (-1);
+    	}else{
+        	tSmartSocketParameter.tConfigure.bRelayScheduleEnable = pJsonSub->valueint;
+        	cJSON_Delete(pJson);
+        	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+        		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+        							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+        		xSemaphoreGive(xSmartSocketParameterSemaphore);
+        		return 0;
+        	}else{
+        		printf("Take parameter semaphore failed.\n");
+        		return (-1);
+        	}
+    	}
+    }
+    printf("Unrecognized relay schedule.\n");
+    cJSON_Delete(pJson);
+	return (-1);
+}
+
+/******************************************************************************
+ * FunctionName : relay_schedule_get
+ * Description  : get relay schedule
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{
+"Response":{"enable":1,
+			"schedule":{"close_time":3243,"open_time":3248},
+			"schedule":{"close_time":4243,"open_time":4248},
+			"schedule":{"close_time":5243,"open_time":5248},
+			"schedule":{"close_time":6243,"open_time":6248}}
+}
+*******************************************************************************/
+LOCAL int
+relay_schedule_get(cJSON *pcjson, const char* pname)
+{
+	uint8_t unIndex;
+    cJSON * pSubJsonResponse;
+	cJSON * pSubJsonschedule;
+
+    pSubJsonResponse = cJSON_CreateObject();
+    if(NULL == pSubJsonResponse){
+        printf("pSubJsonResponse create fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "Response", pSubJsonResponse);
+    cJSON_AddNumberToObject(pSubJsonResponse, "enable", tSmartSocketParameter.tConfigure.bRelayScheduleEnable);
+
+    for (unIndex = 0; unIndex < RELAY_SCHEDULE_NUM; unIndex++){
+        pSubJsonschedule= cJSON_CreateObject();
+        if(NULL == pSubJsonschedule){
+            printf("pSubJsonEnable create fail\n");
+            return (-1);
+        }
+        cJSON_AddItemToObject(pSubJsonResponse, "schedule", pSubJsonschedule);
+        cJSON_AddNumberToObject(pSubJsonschedule, "close_time", tSmartSocketParameter.tRelaySchedule[unIndex].unRelayCloseTime);
+        cJSON_AddNumberToObject(pSubJsonschedule, "open_time", tSmartSocketParameter.tRelaySchedule[unIndex].unRelayOpenTime);
+    }
+
+	return 0;
+}
+
+/******************************************************************************
  * FunctionName : wifi_softap_get
  * Description  : set up the softap paramer as a JSON format
  * Parameters   : pcjson -- A pointer to a JSON object
@@ -679,7 +841,7 @@ wifi_softap_get(cJSON *pcjson)
 }}
 *******************************************************************************/
 LOCAL int  
-wifi_info_get(cJSON *pcjson,const char* pname)
+wifi_info_get(cJSON *pcjson, const char* pname)
 {
 
     ap_conf = (struct softap_config *)zalloc(sizeof(struct softap_config));
@@ -991,6 +1153,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
     {"config", "switch", switch_status_get, switch_status_set},
 	{"config", "manual", manual_enable_get, manual_enable_set},
 	{"config", "debug", NULL, debug_smart_config},
+	{"config", "schedule", relay_schedule_get, relay_schedule_set},
 	{"client", "current", current_value_get,NULL},
 	{"client", "voltage", voltage_value_get,NULL},
 	{"client", "power", power_value_get,NULL},
@@ -1059,7 +1222,7 @@ int   cgiEspApi(HttpdConnData *connData) {
                 printf(" ERROR! cJSON_CreateObject fail!\n");
                 return HTTPD_CGI_DONE;
             }
-            ret=espCgiApiNodes[i].get(pcjson, espCgiApiNodes[i].cmd);
+            ret=espCgiApiNodes[i].get(pcjson, connData->getArgs);//espCgiApiNodes[i].cmd);
             if(ret == 0){
                 pchar = cJSON_Print(pcjson);
                 len = strlen(pchar);

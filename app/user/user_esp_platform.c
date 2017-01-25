@@ -518,7 +518,7 @@ user_esp_platform_maintainer(void *pvParameters)
 //    QueueStop = NULL;
     while(1){
 //        unSNTPTime = sntp_get_current_timestamp();
-//        os_printf("time:%d\r\n",unSNTPTime);
+//        os_printf("time:%u\r\n",unSNTPTime);
 //        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
     	if (1 == tSmartSocketParameter.tConfigure.bReSmartConfig){
     		device_status = DEVICE_CONNECTING;
