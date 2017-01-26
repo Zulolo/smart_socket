@@ -667,6 +667,82 @@ wifi_softap_get(cJSON *pcjson)
 }
 
 /******************************************************************************
+ * FunctionName : current_threshold_set
+ * Description  : set current threshold
+ * Parameters   : pcjson -- A pointer to a JSON formated string
+ * Returns      : result
+ * {"set":{"current_threshold":10}}
+*******************************************************************************/
+LOCAL int
+current_threshold_set(const char* pValue)
+{
+	cJSON * pJson;
+	cJSON * pJsonSub;
+	cJSON * pJsonSubSet;
+
+    pJson = cJSON_Parse(pValue);
+    if(NULL == pJson){
+        printf("current_threshold_set cJSON_Parse fail\n");
+        return (-1);
+    }
+
+    pJsonSubSet = cJSON_GetObjectItem(pJson, "set");
+    if(pJsonSubSet == NULL) {
+        printf("cJSON_GetObjectItem set fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "current_threshold")) != NULL){
+        printf("cJSON_GetObjectItem current_threshold fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+    if ((pJsonSub->valuedouble < MIN_CURRENT_THRESHOLD) || (pJsonSub->valuedouble > MAX_CURRENT_THRESHOLD)){
+        printf("Threshold value error.\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+    tSmartSocketParameter.fCurrentThreshold = pJsonSub->valuedouble;
+
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE){
+		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+		xSemaphoreGive(xSmartSocketParameterSemaphore);
+	}else{
+		printf("Take parameter semaphore failed.\n");
+		cJSON_Delete(pJson);
+		return (-1);
+	}
+	return 0;
+}
+
+/******************************************************************************
+ * FunctionName : current_threshold_get
+ * Description  : get schedule configuration
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{
+"Response":{"current_threshold":10}
+}
+*******************************************************************************/
+LOCAL int
+current_threshold_get(cJSON *pcjson, const char* pname)
+{
+    cJSON * pSubJsonResponse;
+
+    pSubJsonResponse = cJSON_CreateObject();
+    if(NULL == pSubJsonResponse){
+        printf("pSubJsonResponse create fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "Response", pSubJsonResponse);
+    cJSON_AddNumberToObject(pSubJsonResponse, "current_threshold", tSmartSocketParameter.fCurrentThreshold);
+
+	return 0;
+}
+
+/******************************************************************************
  * FunctionName : relay_schedule_set
  * Description  : set relay schedule
  * Parameters   : pcjson -- A pointer to a JSON formated string
@@ -674,8 +750,6 @@ wifi_softap_get(cJSON *pcjson)
  * {"set":{"schedule":{"index":0,"close_time":3248,"open_time":3456}}}
  * {"set":{"enable":1}}
 *******************************************************************************/
-
-
 LOCAL int
 relay_schedule_set(const char* pValue)
 {
@@ -691,13 +765,13 @@ relay_schedule_set(const char* pValue)
 
     pJson = cJSON_Parse(pValue);
     if(NULL == pJson){
-        printf("wifi_info_set cJSON_Parse fail\n");
+        printf("relay_schedule_set cJSON_Parse fail\n");
         return (-1);
     }
 
     pJsonSubSet = cJSON_GetObjectItem(pJson, "set");
     if(pJsonSubSet == NULL) {
-        printf("cJSON_GetObjectItem pJsonSubSet fail\n");
+        printf("cJSON_GetObjectItem set fail\n");
         cJSON_Delete(pJson);
         return (-1);
     }
@@ -705,7 +779,7 @@ relay_schedule_set(const char* pValue)
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "schedule")) != NULL){
         pJsonSubIndex= cJSON_GetObjectItem(pJsonSub, "index");
         if(NULL == pJsonSubIndex){
-            printf("cJSON_GetObjectItem pJsonSubIndex fail.\n");
+            printf("cJSON_GetObjectItem schedule fail.\n");
             cJSON_Delete(pJson);
             return (-1);
         }else{
@@ -1159,6 +1233,8 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"config", "manual", manual_enable_get, manual_enable_set},
 	{"config", "debug", NULL, debug_smart_config},
 	{"config", "schedule", relay_schedule_get, relay_schedule_set},
+	{"config", "threshold", current_threshold_get, current_threshold_set},
+//TODO	{"config", "sntp", sntp_get, sntp_set},
 	{"client", "current", current_value_get,NULL},
 	{"client", "voltage", voltage_value_get,NULL},
 	{"client", "power", power_value_get,NULL},

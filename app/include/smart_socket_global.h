@@ -27,6 +27,9 @@
 #define MAX_TREND_NUM_PER_QUERY			10
 #define MAX_TREND_QUERY_LEN				((TREND_RECORD_INTERVAL / 1000) * MAX_TREND_NUM_PER_QUERY)
 
+#define MAX_CURRENT_THRESHOLD			10
+#define MIN_CURRENT_THRESHOLD			1
+
 #define MAX_SNTP_SERVER_ADDR_LEN		64
 #define RELAY_SCHEDULE_NUM				4
 #define RELAY_SCHEDULE_MAX_SEC_DAY		(SECSPERDAY)
@@ -90,6 +93,7 @@ typedef struct SmartSocketParameter{
 	}tConfigure;
 	char cSNTP_Server[3][MAX_SNTP_SERVER_ADDR_LEN];
 	RelaySchedule_t tRelaySchedule[RELAY_SCHEDULE_NUM];
+	float fCurrentThreshold;
 	uint32 unTrendRecordNum;
 	uint32 unValidation;	//TODO: use CRC of tEvent array data
 }SmartSocketParameter_t;

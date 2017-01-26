@@ -21,7 +21,9 @@
 
 #define PRIV_PARAM_SAVE     0
 
-#define PLUG_USER_KEY_NUM      1
+#define PLUG_USER_KEY_NUM	1
+#define RELAY_CLOSE_VALUE	1
+#define RELAY_OPEN_VALUE	0
 
 #define NEW_BOARD
 #ifdef NEW_BOARD
@@ -51,7 +53,7 @@
 	#define RELAY_CLOSE()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 1)
 	#define RELAY_OPEN()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 0)
 
-	#define RELAY_GET_STATE()		((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(1):(0))
+	#define RELAY_GET_STATE()		((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(RELAY_CLOSE_VALUE):(RELAY_OPEN_VALUE))
 #else
 	#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO4_U
 	#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO4
@@ -84,9 +86,6 @@
 
 #define PLUG_LINK_LED_ON		GPIO_OUTPUT_SET(PLUG_LINK_LED_PIN_NUM, 0)
 #define PLUG_LINK_LED_OFF		GPIO_OUTPUT_SET(PLUG_LINK_LED_PIN_NUM, 1)
-
-#define RELAY_CLOSE_VALUE	1
-#define RELAY_OPEN_VALUE	0
 
 //LOCAL struct plug_saved_param plug_param;
 LOCAL struct keys_param keys;
@@ -152,7 +151,20 @@ bool user_plug_relay_schedule_action(uint32_t unSystemTime)
 	unSecondInDay = unSystemTime % SECSPERDAY;
 
 	for (unRecipeIndex = 0; unRecipeIndex < RELAY_SCHEDULE_NUM; unRecipeIndex++){
+		if (!(IS_RELAY_SCHEDULE_EMPTY(unRecipeIndex))){
+			if ((unSecondInDay >= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayCloseTime) &&
+					(unSecondInDay <= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayOpenTime)){
+				if (user_plug_get_status() != RELAY_CLOSE_VALUE){
+					user_plug_set_status(RELAY_CLOSE_VALUE);
+					return true;
+				}
+			}
+		}
+	}
 
+	// open
+	if (user_plug_get_status() != RELAY_OPEN_VALUE){
+		user_plug_set_status(RELAY_OPEN_VALUE);
 	}
 	return true;
 }

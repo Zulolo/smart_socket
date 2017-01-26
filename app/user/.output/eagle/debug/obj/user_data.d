@@ -85,4 +85,10 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/pwm.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
- ../include/smart_socket_global.h ../include/driver/gpio.h
+ ../include/smart_socket_global.h ../include/driver/gpio.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_time.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/timers.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sys.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/arch/sys_arch.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h

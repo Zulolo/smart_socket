@@ -97,6 +97,11 @@
  ../include/user_esp_platform.h ../include/user_plug.h \
  ../include/driver/key.h ../include/driver/gpio.h \
  ../include/smart_socket_global.h ../include/driver/gpio.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_time.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/timers.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sys.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/arch/sys_arch.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/upgrade.h \
  ../include/user_cgi.h ../libesphttpd/include/httpd.h ../include/cs5463.h \
  ../include/smart_socket_global.h ../include/user_data.h

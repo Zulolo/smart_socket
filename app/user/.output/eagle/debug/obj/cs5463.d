@@ -86,4 +86,12 @@
  ../include/driver/gpio.h ../include/driver/spi_register.h \
  ../include/driver/spi_interface.h ../include/driver/spi_register.h \
  ../include/cs5463.h ../include/driver/gpio.h ../include/user_data.h \
- ../include/smart_socket_global.h
+ ../include/smart_socket_global.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_time.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/timers.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sys.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/arch/sys_arch.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h
