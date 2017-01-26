@@ -674,6 +674,8 @@ wifi_softap_get(cJSON *pcjson)
  * {"set":{"schedule":{"index":0,"close_time":3248,"open_time":3456}}}
  * {"set":{"enable":1}}
 *******************************************************************************/
+
+
 LOCAL int
 relay_schedule_set(const char* pValue)
 {
@@ -746,8 +748,11 @@ relay_schedule_set(const char* pValue)
         		unOpenTime = pJsonSubOpenTime->valueint;
         	}
         }
-    	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayCloseTime = unCloseTime;
-    	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayOpenTime = unOpenTime;
+        if (user_plug_relay_schedule_validation(unIndex, unCloseTime, unOpenTime) == true){
+        	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayCloseTime = unCloseTime;
+        	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayOpenTime = unOpenTime;
+        }
+
     	cJSON_Delete(pJson);
     	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
     		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),

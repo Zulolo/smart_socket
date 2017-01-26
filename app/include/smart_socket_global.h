@@ -9,6 +9,7 @@
 #define APP_INCLUDE_SMART_SOCKET_GLOBAL_H_
 
 #include "driver/gpio.h"
+#include "lwip/apps/sntp_time.h"
 
 #define FLASH_SECTOR_SIZE				0x1000
 #define FLASH_PROTECT_SECTORS			3			// If using flash protecting, writing one sector will actually cost 3 sectors
@@ -28,8 +29,11 @@
 
 #define MAX_SNTP_SERVER_ADDR_LEN		64
 #define RELAY_SCHEDULE_NUM				4
-#define RELAY_SCHEDULE_MAX_SEC_DAY		(24*60*60)
+#define RELAY_SCHEDULE_MAX_SEC_DAY		(SECSPERDAY)
+#define RELAY_SCHEDULE_TIME_ZONE		(8)
 #define RELAY_SCHEDULE_MIN_CLOSE_TIME	5
+#define IS_RELAY_SCHEDULE_EMPTY(index)	(tSmartSocketParameter.tRelaySchedule[(index)].unRelayCloseTime == \
+											tSmartSocketParameter.tRelaySchedule[(index)].unRelayOpenTime)
 
 typedef enum{
 	USER_DATA_EVENT_HISTORY = 0,	// event history

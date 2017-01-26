@@ -14,6 +14,8 @@ uint8 user_plug_get_status(void);
 void user_plug_set_status(bool status);
 //BOOL user_get_key_status(void);
 void user_link_led_output(UserLinkLedPattern_t tPattern);
+bool user_plug_relay_schedule_validation(uint8_t unIndex, uint32_t unCloseTime, uint32_t unOpenTime);
+bool user_plug_relay_schedule_action(uint32_t unSystemTime);
 
 #endif
 

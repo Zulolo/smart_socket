@@ -101,6 +101,63 @@ SmartSocketParameter_t tSmartSocketParameter;
 //extern void startSmartConfig(void);
 
 /******************************************************************************
+ * FunctionName : user_plug_relay_schedule_validation
+ * Description  : check if the input close time and open time is valid (no overlap with other schedule recipe)
+ * Parameters   : uint8_t unIndex
+ * 				  uint32_t unCloseTime
+ * 				  uint32_t unOpenTime
+ * Returns      : bool - valid/invalid
+*******************************************************************************/
+bool user_plug_relay_schedule_validation(uint8_t unIndex, uint32_t unCloseTime, uint32_t unOpenTime)
+{
+	uint8_t unRecipeIndex;
+	if (unCloseTime >= unOpenTime){
+		return false;
+	}
+	if ((unCloseTime >= RELAY_SCHEDULE_MAX_SEC_DAY) || (unOpenTime >= RELAY_SCHEDULE_MAX_SEC_DAY)){
+		return false;
+	}
+
+	for (unRecipeIndex = 0; unRecipeIndex < RELAY_SCHEDULE_NUM; unRecipeIndex++){
+		if (unIndex != unRecipeIndex){
+			if (!(IS_RELAY_SCHEDULE_EMPTY(unRecipeIndex))){
+				if (((unCloseTime >= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayCloseTime) &&
+						(unCloseTime <= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayOpenTime)) ||
+						((unOpenTime >= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayCloseTime) &&
+								(unOpenTime <= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayOpenTime)) ){
+					return false;
+				}
+			}
+		}
+	}
+	return true;
+}
+
+/******************************************************************************
+ * FunctionName : user_plug_relay_schedule_action
+ * Description  : check if relay schedule recipe need to be executed
+ * Parameters   : uint32_t unSystemTime
+ * Returns      : bool - execute fail/success
+*******************************************************************************/
+bool user_plug_relay_schedule_action(uint32_t unSystemTime)
+{
+	uint32_t unSecondInDay;
+	uint8_t unRecipeIndex;
+
+	if (unSystemTime < 1485273600){	// 2017/01/25 0:0:0
+		return false;
+	}
+	// change to UTC time
+	unSystemTime -= (RELAY_SCHEDULE_TIME_ZONE * SECSPERHOUR);
+	unSecondInDay = unSystemTime % SECSPERDAY;
+
+	for (unRecipeIndex = 0; unRecipeIndex < RELAY_SCHEDULE_NUM; unRecipeIndex++){
+
+	}
+	return true;
+}
+
+/******************************************************************************
  * FunctionName : user_plug_get_status
  * Description  : get plug's status, 0x00 or 0x01
  * Parameters   : none
