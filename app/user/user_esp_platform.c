@@ -441,23 +441,22 @@ void
 user_esp_platform_maintainer(void *pvParameters)
 {
     int ret;
-    u8 timeout_count = 0;
-    int32 nNetTimeout=1000;// 1 Sec
-    uint32_t unSNTPTime;
+//    u8 timeout_count = 0;
+//    int32 nNetTimeout=1000;// 1 Sec
+//
+//    u8 connect_retry_c;
+//    u8 total_connect_retry_c;
 
-    u8 connect_retry_c;
-    u8 total_connect_retry_c;
-
-    struct ip_info sta_ipconfig;
-    
-    bool ValueFromReceive = false;
-    portBASE_TYPE xStatus;
-
-    int stack_counter=0;
-    int quiet=0;
-    
-    client_param.sock_fd=-1;
-    
+//    struct ip_info sta_ipconfig;
+//
+//    bool ValueFromReceive = false;
+//    portBASE_TYPE xStatus;
+//
+//    int stack_counter=0;
+//    int quiet=0;
+//
+//    client_param.sock_fd=-1;
+//
     user_esp_platform_param_recover();
 
     user_plug_init();
@@ -517,7 +516,7 @@ user_esp_platform_maintainer(void *pvParameters)
 //    vQueueDelete(QueueStop);
 //    QueueStop = NULL;
     while(1){
-        unSNTPTime = sntp_get_current_timestamp();
+
 //        os_printf("time:%u\r\n",unSNTPTime);
 //        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
     	if (1 == tSmartSocketParameter.tConfigure.bReSmartConfig){
@@ -526,7 +525,11 @@ user_esp_platform_maintainer(void *pvParameters)
             wifi_station_disconnect();
     		startSmartConfig();
     	}
-    	user_plug_relay_schedule_action(unSNTPTime);
+
+    	if ((1 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
+    			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
+    		user_plug_relay_schedule_action(sntp_get_current_timestamp());
+    	}
 
     	vTaskDelay(1000/portTICK_RATE_MS);
     }

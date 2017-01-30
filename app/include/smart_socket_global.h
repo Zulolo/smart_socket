@@ -31,6 +31,8 @@
 #define MIN_CURRENT_THRESHOLD			1
 
 #define MAX_SNTP_SERVER_ADDR_LEN		64
+#define MAX_SNTP_SERVER_NUM				3
+
 #define RELAY_SCHEDULE_NUM				4
 #define RELAY_SCHEDULE_MAX_SEC_DAY		(SECSPERDAY)
 #define RELAY_SCHEDULE_TIME_ZONE		(8)
@@ -85,13 +87,15 @@ typedef struct RelaySchedule{
 typedef struct SmartSocketParameter{
 	struct
 	{
+		uint32 bSNTPEnable : 1;
 		uint32 bButtonRelayEnable : 1;
 		uint32 bTrendEnable : 1;
 		uint32 bReSmartConfig : 1;
 		uint32 bRelayScheduleEnable : 1;
-		uint32 unused : 28;
+		uint32 bCurrentFailed : 1;
+		uint32 unused : 26;
 	}tConfigure;
-	char cSNTP_Server[3][MAX_SNTP_SERVER_ADDR_LEN];
+	char cSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
 	RelaySchedule_t tRelaySchedule[RELAY_SCHEDULE_NUM];
 	float fCurrentThreshold;
 	uint32 unTrendRecordNum;

@@ -743,6 +743,139 @@ current_threshold_get(cJSON *pcjson, const char* pname)
 }
 
 /******************************************************************************
+ * FunctionName : sntp_set
+ * Description  : set SNTP server URL address
+ * Parameters   : pcjson -- A pointer to a JSON formated string
+ * Returns      : result
+ * {"set":{"sntp":{"index":0,"url":"cn.pool.ntp.org"}}}
+ * {"set":{"enable":1}}
+*******************************************************************************/
+LOCAL int
+sntp_set(const char* pValue)
+{
+	cJSON * pJson;
+	cJSON * pJsonSub;
+	cJSON * pJsonSubSet;
+	cJSON * pJsonSubIndex;
+	cJSON * pJsonSubURL;
+	uint8_t unIndex;
+
+    pJson = cJSON_Parse(pValue);
+    if(NULL == pJson){
+        printf("sntp_set cJSON_Parse fail\n");
+        return (-1);
+    }
+
+    pJsonSubSet = cJSON_GetObjectItem(pJson, "set");
+    if(pJsonSubSet == NULL) {
+        printf("cJSON_GetObjectItem set fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "sntp")) != NULL){
+        pJsonSubIndex= cJSON_GetObjectItem(pJsonSub, "index");
+        if(NULL == pJsonSubIndex){
+            printf("cJSON_GetObjectItem sntp fail.\n");
+            cJSON_Delete(pJson);
+            return (-1);
+        }else{
+        	if ((pJsonSubIndex->valueint < 0) || (pJsonSubIndex->valueint >= MAX_SNTP_SERVER_NUM)){
+                printf("SNTP index error.\n");
+                cJSON_Delete(pJson);
+                return (-1);
+        	}else{
+        		unIndex = pJsonSubIndex->valueint;
+        	}
+        }
+
+        pJsonSubURL = cJSON_GetObjectItem(pJsonSub,"url");
+        if(NULL == pJsonSubURL){
+			printf("cJSON_GetObjectItem pJsonSubURL fail\n");
+			cJSON_Delete(pJson);
+			return (-1);
+		}else{
+        	if (strlen(pJsonSubURL->valuestring) >= MAX_SNTP_SERVER_ADDR_LEN){
+                printf("URL length error.\n");
+                cJSON_Delete(pJson);
+                return (-1);
+        	}else{
+        		strcpy(tSmartSocketParameter.cSNTP_Server[unIndex], pJsonSubURL->valuestring);
+        	}
+        }
+
+    	cJSON_Delete(pJson);
+    	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+    		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+    							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+    		xSemaphoreGive(xSmartSocketParameterSemaphore);
+    		return 0;
+    	}else{
+    		printf("Take parameter semaphore failed.\n");
+    		return (-1);
+    	}
+    }
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "enable")) != NULL){
+		if ((pJsonSub->valueint != 0) && (pJsonSub->valueint != 1)){
+            printf("SNTP enable value error\n");
+            cJSON_Delete(pJson);
+            return (-1);
+    	}else{
+        	tSmartSocketParameter.tConfigure.bSNTPEnable = pJsonSub->valueint;
+        	cJSON_Delete(pJson);
+        	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+        		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+        							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+        		xSemaphoreGive(xSmartSocketParameterSemaphore);
+        		return 0;
+        	}else{
+        		printf("Take parameter semaphore failed.\n");
+        		return (-1);
+        	}
+    	}
+    }
+    printf("Unrecognized SNTP configuration.\n");
+    cJSON_Delete(pJson);
+	return (-1);
+}
+
+/******************************************************************************
+ * FunctionName : sntp_get
+ * Description  : get sntp configuration
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{
+"Response":{"enable":1,
+			"server_0":"cn.pool.ntp.org",
+			"server_1":"asia.pool.ntp.org",
+			"server_2":"pool.ntp.org"}
+}
+*******************************************************************************/
+LOCAL int
+sntp_get(cJSON *pcjson, const char* pname)
+{
+	uint8_t unIndex;
+	char cServerName[16];
+    cJSON * pSubJsonResponse;
+
+    pSubJsonResponse = cJSON_CreateObject();
+    if(NULL == pSubJsonResponse){
+        printf("pSubJsonResponse create fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "Response", pSubJsonResponse);
+    cJSON_AddNumberToObject(pSubJsonResponse, "enable", tSmartSocketParameter.tConfigure.bSNTPEnable);
+
+    for (unIndex = 0; unIndex < MAX_SNTP_SERVER_NUM; unIndex++){
+    	sprintf(cServerName, "server_%u", unIndex);
+        cJSON_AddStringToObject(pSubJsonResponse, cServerName, tSmartSocketParameter.cSNTP_Server[unIndex]);
+    }
+
+	return 0;
+}
+
+/******************************************************************************
  * FunctionName : relay_schedule_set
  * Description  : set relay schedule
  * Parameters   : pcjson -- A pointer to a JSON formated string
@@ -1234,7 +1367,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"config", "debug", NULL, debug_smart_config},
 	{"config", "schedule", relay_schedule_get, relay_schedule_set},
 	{"config", "threshold", current_threshold_get, current_threshold_set},
-//TODO	{"config", "sntp", sntp_get, sntp_set},
+	{"config", "sntp", sntp_get, sntp_set},
 	{"client", "current", current_value_get,NULL},
 	{"client", "voltage", voltage_value_get,NULL},
 	{"client", "power", power_value_get,NULL},

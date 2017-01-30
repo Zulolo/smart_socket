@@ -149,6 +149,7 @@ bool user_plug_relay_schedule_action(uint32_t unSystemTime)
 	// change to UTC time
 	unSystemTime -= (RELAY_SCHEDULE_TIME_ZONE * SECSPERHOUR);
 	unSecondInDay = unSystemTime % SECSPERDAY;
+//	printf("unSecondInDay is %u.\n", unSecondInDay);
 
 	for (unRecipeIndex = 0; unRecipeIndex < RELAY_SCHEDULE_NUM; unRecipeIndex++){
 		if (!(IS_RELAY_SCHEDULE_EMPTY(unRecipeIndex))){
@@ -156,8 +157,8 @@ bool user_plug_relay_schedule_action(uint32_t unSystemTime)
 					(unSecondInDay <= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayOpenTime)){
 				if (user_plug_get_status() != RELAY_CLOSE_VALUE){
 					user_plug_set_status(RELAY_CLOSE_VALUE);
-					return true;
 				}
+				return true;
 			}
 		}
 	}
@@ -229,7 +230,9 @@ LOCAL void
 user_plug_short_press(void)
 {
 	printf("Short press!\n");
-	if (1 == tSmartSocketParameter.tConfigure.bButtonRelayEnable){
+	if ((1 == tSmartSocketParameter.tConfigure.bButtonRelayEnable) &&
+			(0 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
+			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
 		user_plug_toggle_status();
 	}
 }
