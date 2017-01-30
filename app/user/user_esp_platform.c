@@ -63,8 +63,6 @@ LOCAL int  user_boot_flag;
 
 struct esp_platform_saved_param esp_param;
 
-LOCAL uint8 device_status;
-
 LOCAL struct rst_info rtc_info;
 
 LOCAL uint8 iot_version[20];
@@ -72,6 +70,21 @@ LOCAL uint8 iot_version[20];
 LOCAL struct client_conn_param client_param;
 
 extern SmartSocketParameter_t tSmartSocketParameter;
+
+void wifi_conn_event_cb(System_Event_t *event)
+{
+    if (event == NULL) {
+        return;
+    }
+
+    switch (event->event_id) {
+        case EVENT_STAMODE_GOT_IP:
+        	tSmartSocketParameter.tConfigure.bIPGotten = 1;
+            break;
+        default:
+            break;
+    }
+}
 
 /******************************************************************************
  * FunctionName : smartconfig_done
@@ -121,7 +134,7 @@ smartconfig_done(sc_status status, void *pdata)
             smartconfig_stop();
             
             user_link_led_output(LED_OFF);
-            device_status = DEVICE_GOT_IP;
+            tSmartSocketParameter.tConfigure.bIPGotten = 1;
             break;
     }
 
@@ -196,37 +209,37 @@ user_esp_platform_set_active(uint8 activeflag)
 
     system_param_save_with_protect(ESP_PARAM_START_SEC, &esp_param, sizeof(esp_param));
 }
-/******************************************************************************
- * FunctionName : user_esp_platform_set_connect_status
- * Description  : set each connection step's status
- * Parameters   : none
- * Returns      : status
-*******************************************************************************/
+///******************************************************************************
+// * FunctionName : user_esp_platform_set_connect_status
+// * Description  : set each connection step's status
+// * Parameters   : none
+// * Returns      : status
+//*******************************************************************************/
+//
+//void
+//user_esp_platform_set_connect_status(uint8 status)
+//{
+//    device_status = status;
+//}
 
-void  
-user_esp_platform_set_connect_status(uint8 status)
-{
-    device_status = status;
-}
-
-/******************************************************************************
- * FunctionName : user_esp_platform_get_connect_status
- * Description  : get each connection step's status
- * Parameters   : none
- * Returns      : status
-*******************************************************************************/
-uint8  
-user_esp_platform_get_connect_status(void)
-{
-    uint8 status = wifi_station_get_connect_status();
-
-    if (status == STATION_GOT_IP) {
-        status = (device_status == 0) ? DEVICE_CONNECTING : device_status;
-    }
-
-    ESP_DBG("status %d\n", status);
-    return status;
-}
+///******************************************************************************
+// * FunctionName : user_esp_platform_get_connect_status
+// * Description  : get each connection step's status
+// * Parameters   : none
+// * Returns      : status
+//*******************************************************************************/
+//uint8
+//user_esp_platform_get_connect_status(void)
+//{
+//    uint8 status = wifi_station_get_connect_status();
+//
+//    if (status == STATION_GOT_IP) {
+//        status = (device_status == 0) ? DEVICE_CONNECTING : device_status;
+//    }
+//
+//    ESP_DBG("status %d\n", status);
+//    return status;
+//}
 
 /******************************************************************************
  * FunctionName : user_esp_platform_parse_nonce
@@ -426,11 +439,25 @@ void startSmartConfig(void)
 	smartconfig_stop();
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
 
-	while(device_status != DEVICE_GOT_IP){
+	while(tSmartSocketParameter.tConfigure.bIPGotten != 1){
 		ESP_DBG("configing...\n");
 		vTaskDelay(2000 / portTICK_RATE_MS);
 	}
 }
+
+void reconnectAP(void)
+{
+	/* entry station mode and connect to ap cached */
+//	printf("entry station mode to connect server \n");
+	wifi_set_opmode(STATION_MODE);
+	wifi_set_event_handler_cb(wifi_conn_event_cb);
+
+	while(tSmartSocketParameter.tConfigure.bIPGotten != 1){
+		ESP_DBG("configing...\n");
+		vTaskDelay(2000 / portTICK_RATE_MS);
+	}
+}
+
 /******************************************************************************
  * FunctionName : user_esp_platform_init
  * Description  : device parame init based on espressif platform
@@ -441,87 +468,36 @@ void
 user_esp_platform_maintainer(void *pvParameters)
 {
     int ret;
-//    u8 timeout_count = 0;
-//    int32 nNetTimeout=1000;// 1 Sec
-//
-//    u8 connect_retry_c;
-//    u8 total_connect_retry_c;
+    struct station_config *sta_config;
 
-//    struct ip_info sta_ipconfig;
-//
-//    bool ValueFromReceive = false;
-//    portBASE_TYPE xStatus;
-//
-//    int stack_counter=0;
-//    int quiet=0;
-//
-//    client_param.sock_fd=-1;
-//
     user_esp_platform_param_recover();
 
     user_plug_init();
 
     wifi_station_ap_number_set(AP_CACHE_NUMBER);
 
-    //printf("rtc_info.reason 000-%d, 000-%d reboot, flag %d\n",rtc_info.reason,(REBOOT_MAGIC == user_boot_flag),user_boot_flag);
+	sta_config = (struct station_config *)zalloc(sizeof(struct station_config)*5);
+	ret = wifi_station_get_ap_info(sta_config);
+	free(sta_config);
+	printf("wifi_station_get_ap num %d\n",ret);
+	if(0 == ret) {
+		/*AP_num == 0, no ap cached,start smartcfg*/
+		startSmartConfig();
+	}else{
+		reconnectAP();
+	}
 
-    /*if not reboot back, power on with key pressed, enter stationap mode*/
-//    if( (REBOOT_MAGIC != user_boot_flag) && (1 == user_get_key_status())){
-//        /*device power on with stationap mode defaultly, neednt config again*/
-//        //user_platform_stationap_enable();
-//        printf("enter softap+station mode\n");
-//
-//        user_link_led_output(LED_ON);//gpio 12
-//
-//        //for cloud test only
-//        if(0){/*for test*/
-//            struct station_config *sta_config = (struct station_config *)zalloc(sizeof(struct station_config));
-//            wifi_station_get_ap_info(sta_config);
-//            memset(sta_config, 0, sizeof(struct station_config));
-//            sprintf(sta_config->ssid, "IOT_DEMO_TEST");
-//            sprintf(sta_config->password, "0000");
-//            wifi_station_set_config(sta_config);
-//            free(sta_config);
-//        }
-//
-//        if(TRUE == esp_param.tokenrdy)
-//        	goto Local_mode;
-//
-//    }else{
-        struct station_config *sta_config5 = (struct station_config *)zalloc(sizeof(struct station_config)*5);
-        ret = wifi_station_get_ap_info(sta_config5);
-        free(sta_config5);
-        printf("wifi_station_get_ap num %d\n",ret);
-        if(0 == ret) {
-			/*AP_num == 0, no ap cached,start smartcfg*/
-        	startSmartConfig();
-        }else{
-            /* entry station mode and connect to ap cached */
-            printf("entry station mode to connect server \n");
-            wifi_set_opmode(STATION_MODE);
-        }
-//    }
+	sntp_setservername(0, tSmartSocketParameter.cSNTP_Server[0]);
+	sntp_setservername(1, tSmartSocketParameter.cSNTP_Server[1]);
+	sntp_setservername(2, tSmartSocketParameter.cSNTP_Server[2]);
+	sntp_init();
 
-        sntp_setservername(0, tSmartSocketParameter.cSNTP_Server[0]);
-        sntp_setservername(1, tSmartSocketParameter.cSNTP_Server[1]);
-        sntp_setservername(2, tSmartSocketParameter.cSNTP_Server[2]);
-        sntp_init();
-
-//Local_mode:
-//	wifi_set_opmode(STATIONAP_MODE);
-//
-//    if(client_param.sock_fd >= 0)
-//    	close(client_param.sock_fd);
-//
-//    vQueueDelete(QueueStop);
-//    QueueStop = NULL;
     while(1){
-
 //        os_printf("time:%u\r\n",unSNTPTime);
 //        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
     	if (1 == tSmartSocketParameter.tConfigure.bReSmartConfig){
     		tSmartSocketParameter.tConfigure.bReSmartConfig = 0;
-    		device_status = DEVICE_CONNECTING;
+    		tSmartSocketParameter.tConfigure.bIPGotten = 0; //device_status = DEVICE_CONNECTING;
             wifi_station_disconnect();
     		startSmartConfig();
     	}
@@ -538,16 +514,9 @@ user_esp_platform_maintainer(void *pvParameters)
 
 }
 
-
-void   user_esp_platform_init(void)
+void user_esp_platform_init(void)
 {
-//    if (QueueStop == NULL)
-//        QueueStop = xQueueCreate(1,1);
-
-//    if (QueueStop != NULL){
-        xTaskCreate(user_esp_platform_maintainer, "platform_maintainer", 384, NULL, 5, NULL);//512, 274 left,384
-//    }
-        
+    xTaskCreate(user_esp_platform_maintainer, "platform_maintainer", 384, NULL, 5, NULL);//512, 274 left,384
 }
 
 //sint8   user_esp_platform_deinit(void)

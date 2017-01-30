@@ -93,7 +93,8 @@ typedef struct SmartSocketParameter{
 		uint32 bReSmartConfig : 1;
 		uint32 bRelayScheduleEnable : 1;
 		uint32 bCurrentFailed : 1;
-		uint32 unused : 26;
+		uint32 bIPGotten : 1;
+		uint32 unused : 25;
 	}tConfigure;
 	char cSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
 	RelaySchedule_t tRelaySchedule[RELAY_SCHEDULE_NUM];

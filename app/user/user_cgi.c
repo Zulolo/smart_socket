@@ -125,6 +125,30 @@ system_info_get(cJSON *pcjson, const char* pname )
 }
 
 /******************************************************************************
+ * FunctionName : signal_strength_get
+ * Description  : get wifi signal strength
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{
+"signal":16}}
+*******************************************************************************/
+LOCAL int
+signal_strength_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response create fail\n");
+        return -1;
+    }
+
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "signal", wifi_station_get_rssi());
+    return 0;
+}
+
+/******************************************************************************
  * FunctionName : current_value_get
  * Description  : set up current value as a JSON format
  * Parameters   : pcjson -- A pointer to a JSON object
@@ -138,7 +162,6 @@ current_value_get(cJSON *pcjson, const char* pname )
 {
     cJSON * pSubJson_response = cJSON_CreateObject();
 
-    printf("Get current from cs5463.\n");
     if(NULL == pSubJson_response){
         printf("pSubJson_response create fail\n");
         return -1;
@@ -164,7 +187,6 @@ voltage_value_get(cJSON *pcjson, const char* pname )
 {
     cJSON * pSubJson_response = cJSON_CreateObject();
 
-    printf("Get voltage from cs5463.\n");
     if(NULL == pSubJson_response){
         printf("pSubJson_response create fail\n");
         return -1;
@@ -191,7 +213,6 @@ power_value_get(cJSON *pcjson, const char* pname )
 {
     cJSON * pSubJson_response = cJSON_CreateObject();
 
-    printf("Get power from cs5463.\n");
     if(NULL == pSubJson_response){
         printf("pSubJson_response creat fail\n");
         return -1;
@@ -218,7 +239,6 @@ temperature_value_get(cJSON *pcjson, const char* pname )
 {
     cJSON * pSubJson_response = cJSON_CreateObject();
 
-    printf("Get temperature from cs5463.\n");
     if(NULL == pSubJson_response){
         printf("pSubJson_response creat fail\n");
         return -1;
@@ -1368,6 +1388,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"config", "schedule", relay_schedule_get, relay_schedule_set},
 	{"config", "threshold", current_threshold_get, current_threshold_set},
 	{"config", "sntp", sntp_get, sntp_set},
+	{"client", "rssi", signal_strength_get,NULL},
 	{"client", "current", current_value_get,NULL},
 	{"client", "voltage", voltage_value_get,NULL},
 	{"client", "power", power_value_get,NULL},
