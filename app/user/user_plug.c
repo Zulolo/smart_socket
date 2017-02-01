@@ -230,7 +230,9 @@ LOCAL void
 user_plug_short_press(void)
 {
 	printf("Short press!\n");
-	if ((1 == tSmartSocketParameter.tConfigure.bButtonRelayEnable) &&
+	if (1 == tSmartSocketParameter.tConfigure.bJustLongPressed){
+		tSmartSocketParameter.tConfigure.bJustLongPressed = 0;
+	}else if ((1 == tSmartSocketParameter.tConfigure.bButtonRelayEnable) &&
 			(0 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
 			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
 		user_plug_toggle_status();
@@ -247,6 +249,7 @@ LOCAL void
 user_plug_long_press(void)
 {
 	printf("Long press!\n");
+	tSmartSocketParameter.tConfigure.bJustLongPressed = 1;
 	tSmartSocketParameter.tConfigure.bReSmartConfig = 1;
 }
 
