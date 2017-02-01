@@ -130,7 +130,7 @@ system_info_get(cJSON *pcjson, const char* pname )
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
-"signal":16}}
+"signal":-84}}
 *******************************************************************************/
 LOCAL int
 signal_strength_get(cJSON *pcjson, const char* pname )
@@ -154,8 +154,8 @@ signal_strength_get(cJSON *pcjson, const char* pname )
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
-"voltage":3.2,
-"unit":"V"}}
+"current":3.2,
+"unit":"A"}}
 *******************************************************************************/
 LOCAL int
 current_value_get(cJSON *pcjson, const char* pname )
@@ -169,7 +169,7 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_fGetCurrent());
+    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_unGetCurrent());
     cJSON_AddStringToObject(pSubJson_response, "unit", "A");
     return 0;
 }
@@ -180,7 +180,8 @@ current_value_get(cJSON *pcjson, const char* pname )
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
-"current":3.2}}
+"voltage":3.2,
+"unit":"V"}}
 *******************************************************************************/
 LOCAL int
 voltage_value_get(cJSON *pcjson, const char* pname )
@@ -1352,19 +1353,32 @@ scan_result_output(cJSON *pcjson, bool total)
  * Returns      : result
 {"Status":{
 "status":3}}
+
+{"response":{
+"status":10010}}
 *******************************************************************************/
 LOCAL int  
 connect_status_get(cJSON *pcjson, const char* pname )
 {
 
-    cJSON * pSubJson_Status = cJSON_CreateObject();
-    if(NULL == pSubJson_Status){
-        printf("pSubJson_Status creat fail\n");
-        return -1;
-    }
-    cJSON_AddItemToObject(pcjson, "Status", pSubJson_Status); 
+//    cJSON * pSubJson_Status = cJSON_CreateObject();
+//    if(NULL == pSubJson_Status){
+//        printf("pSubJson_Status creat fail\n");
+//        return -1;
+//    }
+//    cJSON_AddItemToObject(pcjson, "Status", pSubJson_Status);
 
 //    cJSON_AddNumberToObject(pSubJson_Status, "status", user_esp_platform_get_connect_status());
+    cJSON * pSubJson_response = cJSON_CreateObject();
+
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response create fail\n");
+        return -1;
+    }
+
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "status", CS5463_unGetStatus());
 
     return 0;
 }

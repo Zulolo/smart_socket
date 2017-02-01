@@ -31,6 +31,11 @@ typedef enum{
 	CS5463_CMD_RD_V_PEAK = 0x2E,
 	CS5463_CMD_RD_PF = 0x32,
 	CS5463_CMD_RD_S = 0x36,
+	CS5463_CMD_WR_CONFIG = 0x40,
+	CS5463_CMD_WR_CYCLE_COUNT = 0x4A,
+	CS5463_CMD_WR_STATUS = 0x5E,
+	CS5463_CMD_WR_MODE = 0x64,
+	CS5463_CMD_WR_MASK = 0x74,
 	CS5463_CMD_START_SINGLE_CNVS = 0xE0,
 	CS5463_CMD_START_CNTN_CNVS = 0xE8,
 	CS5463_CMD_SYNC_0 = 0xFE,
@@ -38,7 +43,8 @@ typedef enum{
 }CS5463_CMD_t;
 
 void CS5463_Manager(void *pvParameters);
-float CS5463_fGetCurrent(void);
+uint32_t CS5463_unGetStatus(void);
+uint32_t CS5463_unGetCurrent(void);
 float CS5463_fGetVoltage(void);
 float CS5463_fGetPower(void);
 float CS5463_fGetTemperature(void);

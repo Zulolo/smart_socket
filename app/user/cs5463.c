@@ -27,10 +27,11 @@
 #define CS5463_RD_REG_CMD		0x00
 #define CS5463_WR_REG_CMD		0x40
 
-int8_t fCS5463_T;
-float fCS5463_I;
-float fCS5463_V;
-float fCS5463_P;
+static int8_t fCS5463_T;
+static uint32_t unCS5463_I;
+static uint32_t unCS5463_Status;
+static float fCS5463_V;
+static float fCS5463_P;
 
 //FLASH_SECTOR_SIZE
 
@@ -63,9 +64,9 @@ int32_t CS5463IF_WriteCmd(uint8_t unWriteCmd)
 {
 	CS5463_SELECT();
 	writeCS5463SPI(unWriteCmd);
-//	writeCS5463SPI(CS5463_CMD_SYNC_1);
-//	writeCS5463SPI(CS5463_CMD_SYNC_1);
-//	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
 	CS5463_DESELECT();
 	return 0;
 }
@@ -159,11 +160,48 @@ trend_record_callback(void *arg)
 {
 	TrendContent_t tValue;
 	tValue.fTemperature = fCS5463_T;
-	tValue.fCurrent = fCS5463_I;
+	tValue.fCurrent = unCS5463_I;
 	tValue.fVoltage = fCS5463_V;
 	tValue.fPower = fCS5463_P;
 	tValue.unTime = sntp_get_current_timestamp();
     DAT_bTrendRecordAdd(tValue);
+}
+
+void initCS5463(void)
+{
+//	  write_5463(0x5e,0x80,0x00,0x00);
+//	   write_5463(0x40,0x00,0x00,0x01);
+//	   write_5463(0x4a,0x00,0x0f,0xa0);
+//	   write_5463(0x74,0x00,0x00,0x00);
+//	   write_5463(0x64,0x80,0x00,0x01);
+//
+	uint8_t unPara[3];
+
+	unPara[0] = 0x80;
+	unPara[1] = 0;
+	unPara[2] = 0;
+	CS5463IF_WriteReg(CS5463_CMD_WR_STATUS, unPara, sizeof(unPara));
+
+	unPara[0] = 0;
+	unPara[1] = 0;
+	unPara[2] = 0x01;
+	CS5463IF_WriteReg(CS5463_CMD_WR_CONFIG, unPara, sizeof(unPara));
+
+	unPara[0] = 0;
+	unPara[1] = 0x0F;
+	unPara[2] = 0xA0;
+	CS5463IF_WriteReg(CS5463_CMD_WR_CYCLE_COUNT, unPara, sizeof(unPara));
+
+	unPara[0] = 0;
+	unPara[1] = 0;
+	unPara[2] = 0;
+	CS5463IF_WriteReg(CS5463_CMD_WR_MASK, unPara, sizeof(unPara));
+
+	unPara[0] = 0x80;
+	unPara[1] = 0;
+	unPara[2] = 0x01;
+	CS5463IF_WriteReg(CS5463_CMD_WR_MODE, unPara, sizeof(unPara));
+
 }
 
 void CS5463_Manager(void *pvParameters)
@@ -192,12 +230,16 @@ void CS5463_Manager(void *pvParameters)
 
 		// Current
 		CS5463IF_Read(CS5463_CMD_RD_I, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_I = (float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		unCS5463_I = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]); //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Voltage
 		CS5463IF_Read(CS5463_CMD_RD_V, unCS5463ReadData, sizeof(unCS5463ReadData));
 		fCS5463_V = (float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		vTaskDelay(200/portTICK_RATE_MS);
+
+		CS5463IF_Read(CS5463_CMD_RD_STATUS, unCS5463ReadData, sizeof(unCS5463ReadData));
+		unCS5463_Status = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Power
@@ -206,10 +248,15 @@ void CS5463_Manager(void *pvParameters)
 		vTaskDelay(200/portTICK_RATE_MS);
 	}
 }
-
-float CS5463_fGetCurrent(void)
+	//
+uint32_t CS5463_unGetStatus(void)
 {
-	return fCS5463_I;
+	return unCS5463_Status;
+}
+
+uint32_t CS5463_unGetCurrent(void)
+{
+	return unCS5463_I;
 }
 
 float CS5463_fGetVoltage(void)

@@ -440,7 +440,7 @@ void startSmartConfig(void)
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
 
 	while(tSmartSocketParameter.tConfigure.bIPGotten != 1){
-		ESP_DBG("configing...\n");
+		ESP_DBG("Smart configuring...\n");
 		vTaskDelay(2000 / portTICK_RATE_MS);
 	}
 }
@@ -453,7 +453,7 @@ void reconnectAP(void)
 	wifi_set_event_handler_cb(wifi_conn_event_cb);
 
 	while(tSmartSocketParameter.tConfigure.bIPGotten != 1){
-		ESP_DBG("configing...\n");
+		ESP_DBG("Connecting...\n");
 		vTaskDelay(2000 / portTICK_RATE_MS);
 	}
 }
