@@ -55,5 +55,6 @@ struct client_conn_param {
 
 void user_esp_platform_init(void);
 sint8   user_esp_platform_deinit(void);
+int user_esp_platform_upgrade_begin(void);
 
 #endif

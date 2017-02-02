@@ -55,7 +55,7 @@
 #endif
 
 #define USE_DNS
-#define ESP_DOMAIN      "iot.espressif.cn"
+#define FW_UPGRADE_DOMAIN      "iot.zulolo.cn"
 
 /*SSL not Ready*/
 //#define SERVER_SSL_ENABLE 

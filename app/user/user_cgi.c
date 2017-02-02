@@ -108,7 +108,7 @@ system_info_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "Device", pSubJson_Device);
 
-    cJSON_AddStringToObject(pSubJson_Version,"hardware","0.2");
+    cJSON_AddStringToObject(pSubJson_Version,"hardware","0.3");
     cJSON_AddStringToObject(pSubJson_Version,"sdk_version",system_get_sdk_version());
     sprintf(buff,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
     IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
@@ -116,7 +116,7 @@ system_info_get(cJSON *pcjson, const char* pname )
     
     cJSON_AddStringToObject(pSubJson_Device,"manufacture","Ming zhi hai mei qi hao");
 
-    cJSON_AddStringToObject(pSubJson_Device,"product", "Smart Socket");
+    cJSON_AddStringToObject(pSubJson_Device,"product", "Smart Plug");
 
     //char * p = cJSON_Print(pcjson);
     //printf("@.@ system_info_get exit with  %s len:%d \n", p, strlen(p));
@@ -357,16 +357,15 @@ event_history_get(cJSON *pcjson, const char* pname )
  * Description  : get if button control relay is enabled or not
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
-{"response":{
-"enable":0}}
+{"response":{"enable":0}}
 *******************************************************************************/
 LOCAL int
 manual_enable_get(cJSON *pcjson, const char* pname )
 {
     cJSON * pSubJson_response = cJSON_CreateObject();
     if(NULL == pSubJson_response){
-        printf("pSubJson_response creat fail\n");
-        return -1;
+        printf("pSubJson_response create fail\n");
+        return (-1);
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
@@ -380,8 +379,7 @@ manual_enable_get(cJSON *pcjson, const char* pname )
  * Description  : enable or disable button control relay
  * Parameters   : pcjson -- A pointer to a JSON formatted string
  * Returns      : result
- {"Response":
- {"status":1 }}
+ {"set":{"enable":1 }}
 *******************************************************************************/
 LOCAL int
 manual_enable_set(const char *pValue)
@@ -391,35 +389,42 @@ manual_enable_set(const char *pValue)
 
     cJSON * pJson = cJSON_Parse(pValue);
 
-    if(NULL != pJson){
-        pJsonSub = cJSON_GetObjectItem(pJson, "set");
+    if(NULL == pJson){
+        printf("pJson create fail\n");
+        return (-1);
     }
 
-    if(NULL != pJsonSub){
-        pJsonSub_enable = cJSON_GetObjectItem(pJsonSub, "enable");
+    pJsonSub = cJSON_GetObjectItem(pJson, "set");
+    if(NULL == pJsonSub){
+    	printf("cJSON_GetObjectItem fail\n");
+    	cJSON_Delete(pJson);
+    	return (-1);
     }
 
-    if(NULL != pJsonSub_enable){
-        if(pJsonSub_enable->type == cJSON_Number){
-        	tSmartSocketParameter.tConfigure.bButtonRelayEnable = pJsonSub_enable->valueint;
-            if(NULL != pJson){
-            	cJSON_Delete(pJson);
-            }
-        	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
-        		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
-        							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
-        		xSemaphoreGive(xSmartSocketParameterSemaphore);
-        	}else{
-        		printf("Take parameter semaphore failed.\n");
-        		return (-1);
-        	}
-            return 0;
-        }
+    pJsonSub_enable = cJSON_GetObjectItem(pJsonSub, "enable");
+    if(NULL == pJsonSub_enable){
+    	printf("pJsonSub_enable fail\n");
+    	cJSON_Delete(pJson);
+    	return (-1);
     }
+	if(pJsonSub_enable->type == cJSON_Number){
+		tSmartSocketParameter.tConfigure.bButtonRelayEnable = pJsonSub_enable->valueint;
+		cJSON_Delete(pJson);
 
-    if(NULL != pJson)cJSON_Delete(pJson);
-    printf("switch_status_set fail\n");
-    return (-1);
+		if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+			system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+								&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+			xSemaphoreGive(xSmartSocketParameterSemaphore);
+		}else{
+			printf("Take parameter semaphore failed.\n");
+			return (-1);
+		}
+		return 0;
+	}else{
+	    cJSON_Delete(pJson);
+	    printf("switch_status_set fail\n");
+	    return (-1);
+	}
 }
 
 /******************************************************************************
@@ -427,8 +432,7 @@ manual_enable_set(const char *pValue)
  * Description  : re-start smart config, only used for debug
  * Parameters   : pcjson -- A pointer to a JSON formatted string
  * Returns      : result
- {"Response":
- {"status":1 }}
+ {"set":{"enable":1 }}
 *******************************************************************************/
 LOCAL int
 debug_smart_config(const char *pValue)
@@ -457,7 +461,7 @@ debug_smart_config(const char *pValue)
     }
 
     if(NULL != pJson)cJSON_Delete(pJson);
-    printf("switch_status_set fail\n");
+    printf("debug_smart_config fail\n");
     return (-1);
 }
 /******************************************************************************
@@ -474,7 +478,7 @@ switch_status_get(cJSON *pcjson, const char* pname )
     cJSON * pSubJson_response = cJSON_CreateObject();
     if(NULL == pSubJson_response){
         printf("pSubJson_response creat fail\n");
-        return -1;
+        return (-1);
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
     
@@ -517,7 +521,7 @@ switch_status_set(const char *pValue)
     
     if(NULL != pJson)cJSON_Delete(pJson);
     printf("switch_status_set fail\n");
-    return -1;
+    return (-1);
 }
 
 
@@ -534,6 +538,79 @@ system_status_reset(const char *pValue)
 {
     printf("system_status_reset %s \n", pValue);
     DAT_nFlashDataClean();
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : user_upgrade_start
+ * Description  : set and start FW upgrade
+ * Parameters   : pcjson -- A pointer to a JSON formated string
+ * Returns      : result
+{
+"set":{"upgrade_url":"192.168.31.157",
+		"upgrade_port":80,
+		"upgrade_token":"123456789ABCDEF...",
+		"upgrade_version":"1.0.2.5"}
+}
+*******************************************************************************/
+LOCAL int
+user_upgrade_start(const char *pValue)
+{
+	cJSON * pJson;
+	cJSON * pJsonSub;
+	cJSON * pJsonSubSet;
+
+    pJson = cJSON_Parse(pValue);
+    if(NULL == pJson){
+        printf("current_threshold_set cJSON_Parse fail\n");
+        return (-1);
+    }
+
+    pJsonSubSet = cJSON_GetObjectItem(pJson, "set");
+    if(pJsonSubSet == NULL) {
+        printf("cJSON_GetObjectItem set fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_url")) == NULL){
+        printf("cJSON_GetObjectItem update_url fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+    strncpy(tSmartSocketParameter.cFW_UpgradeServer, pJsonSub->valuestring, sizeof(tSmartSocketParameter.cFW_UpgradeServer));
+    tSmartSocketParameter.cFW_UpgradeServer[sizeof(tSmartSocketParameter.cFW_UpgradeServer) - 1] = '\0';
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_token")) == NULL){
+        printf("cJSON_GetObjectItem update_token fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+    memcpy(tSmartSocketParameter.cFW_UpgradeToken, pJsonSub->valuestring, UPGRADE_TOKEN_LENGTH);
+    tSmartSocketParameter.cFW_UpgradeToken[UPGRADE_TOKEN_LENGTH] = '\0';
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_version")) == NULL){
+        printf("cJSON_GetObjectItem upgrade_version fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+    memcpy(tSmartSocketParameter.cFW_UpgradeVersion, pJsonSub->valuestring, UPGRADE_VERSION_LENGTH);
+    tSmartSocketParameter.cFW_UpgradeVersion[UPGRADE_VERSION_LENGTH] = '\0';
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_port")) != NULL){
+        if ((pJsonSub->valueint > 0) && (pJsonSub->valueint <= MAX_TCP_PORT)){
+        	tSmartSocketParameter.unFW_UpgradePort = pJsonSub->valueint;
+        }
+    }
+
+    return 0;
+}
+
+LOCAL int
+user_upgrade_reset(const char *pValue)
+{
+    printf("user_upgrade_reset %s \n", pValue);
+
     return 0;
 }
 
@@ -688,6 +765,63 @@ wifi_softap_get(cJSON *pcjson)
 }
 
 /******************************************************************************
+ * FunctionName : update_url_get
+ * Description  : get update FW URL
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{
+"Response":{"upgrade_url":"192.168.31.157",
+			"upgrade_port":80}
+}
+*******************************************************************************/
+LOCAL int
+update_url_get(cJSON *pcjson, const char* pname)
+{
+    cJSON * pSubJsonResponse;
+
+    pSubJsonResponse = cJSON_CreateObject();
+    if(NULL == pSubJsonResponse){
+        printf("pSubJsonResponse create fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "Response", pSubJsonResponse);
+    cJSON_AddStringToObject(pSubJsonResponse, "upgrade_url", tSmartSocketParameter.cFW_UpgradeServer);
+    cJSON_AddNumberToObject(pSubJsonResponse, "upgrade_port", tSmartSocketParameter.unFW_UpgradePort);
+
+	return 0;
+}
+
+/******************************************************************************
+ * FunctionName : update_url_get
+ * Description  : get update FW URL
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{
+"Response":{"upgrade_progress":0.85,
+			"upgrade_status":1}
+}
+  * #define UPGRADE_FLAG_IDLE      0x00
+  * #define UPGRADE_FLAG_START     0x01
+  * #define UPGRADE_FLAG_FINISH    0x02
+*******************************************************************************/
+LOCAL int
+upgrade_status_get(cJSON *pcjson, const char* pname)
+{
+    cJSON * pSubJsonResponse;
+
+    pSubJsonResponse = cJSON_CreateObject();
+    if(NULL == pSubJsonResponse){
+        printf("pSubJsonResponse create fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "Response", pSubJsonResponse);
+    cJSON_AddNumberToObject(pSubJsonResponse, "upgrade_progress", system_upgrade_get_progress());
+    cJSON_AddNumberToObject(pSubJsonResponse, "upgrade_status", system_upgrade_flag_check());
+
+	return 0;
+}
+
+/******************************************************************************
  * FunctionName : current_threshold_set
  * Description  : set current threshold
  * Parameters   : pcjson -- A pointer to a JSON formated string
@@ -714,7 +848,7 @@ current_threshold_set(const char* pValue)
         return (-1);
     }
 
-    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "current_threshold")) != NULL){
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "current_threshold")) == NULL){
         printf("cJSON_GetObjectItem current_threshold fail\n");
         cJSON_Delete(pJson);
         return (-1);
@@ -726,13 +860,13 @@ current_threshold_set(const char* pValue)
     }
     tSmartSocketParameter.fCurrentThreshold = pJsonSub->valuedouble;
 
+    cJSON_Delete(pJson);
 	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE){
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
 		xSemaphoreGive(xSmartSocketParameterSemaphore);
 	}else{
 		printf("Take parameter semaphore failed.\n");
-		cJSON_Delete(pJson);
 		return (-1);
 	}
 	return 0;
@@ -740,7 +874,7 @@ current_threshold_set(const char* pValue)
 
 /******************************************************************************
  * FunctionName : current_threshold_get
- * Description  : get schedule configuration
+ * Description  : get current threshold configuration
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {
@@ -1402,6 +1536,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"config", "schedule", relay_schedule_get, relay_schedule_set},
 	{"config", "threshold", current_threshold_get, current_threshold_set},
 	{"config", "sntp", sntp_get, sntp_set},
+	{"client", "updateurl", update_url_get, NULL},
 	{"client", "rssi", signal_strength_get,NULL},
 	{"client", "current", current_value_get,NULL},
 	{"client", "voltage", voltage_value_get,NULL},
@@ -1415,9 +1550,10 @@ const EspCgiApiEnt espCgiApiNodes[]={
     {"client", "status", connect_status_get, NULL},
     {"config", "reset", NULL,system_status_reset},
     {"client", "info",  system_info_get, NULL},
+	{"upgrade", "getstatus", upgrade_status_get, NULL},
     {"upgrade", "getuser", user_binfo_get, NULL},
-//    {"upgrade", "start", NULL, user_upgrade_start},
-//    {"upgrade", "reset", NULL, user_upgrade_reset},
+    {"upgrade", "start", NULL, user_upgrade_start},
+    {"upgrade", "reset", NULL, user_upgrade_reset},
     {NULL, NULL, NULL}
 };
 

@@ -74,10 +74,10 @@ struct upgrade_server_info {
     struct sockaddr_in sockaddrin;          /**< socket of upgrading */
     upgrade_states_check_callback check_cb; /**< callback of upgrading */
     uint32 check_times;                     /**< time out of upgrading, unit : ms */
-    uint8 pre_version[16];                  /**< previous version of firmware */
-    uint8 upgrade_version[16];              /**< the new version of firmware */
-    uint8 *url;                             /**< the url of upgrading server */
-    void *pclient_param;
+//    uint8 pre_version[16];                  /**< previous version of firmware */
+//    uint8 upgrade_version[16];              /**< the new version of firmware */
+    char* url;                             /**< the url of upgrading server */
+//    void *pclient_param;
     uint8 upgrade_flag;                     /**< true, upgrade succeed; false, upgrade fail */
 };
 
@@ -109,19 +109,6 @@ void system_upgrade_deinit();
  */
 bool system_upgrade(uint8 *data, uint32 len);
 
-#ifdef UPGRADE_SSL_ENABLE
-
-/**
- * @brief  Start upgrade firmware through WiFi with SSL connection.
- *
- * @param  struct upgrade_server_info *server : the firmware upgrade server info
- *
- * @return true  : succeed
- * @return false : fail
- */
-bool system_upgrade_start_ssl(struct upgrade_server_info *server);
-#else
-
 /**
  * @brief  Start upgrade firmware through WiFi with normal connection.
  *
@@ -132,8 +119,8 @@ bool system_upgrade_start_ssl(struct upgrade_server_info *server);
  */
 
 bool system_upgrade_start(struct upgrade_server_info *server);
-#endif
 
+float system_upgrade_get_progress(void);
 /**
   * @}
   */

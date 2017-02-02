@@ -67,9 +67,79 @@ LOCAL struct rst_info rtc_info;
 
 LOCAL uint8 iot_version[20];
 
-LOCAL struct client_conn_param client_param;
+LOCAL xTaskHandle *ota_task_handle = NULL;
 
 extern SmartSocketParameter_t tSmartSocketParameter;
+
+/******************************************************************************
+ * FunctionName : user_esp_platform_upgrade_cb
+ * Description  : Processing the downloaded data from the server
+ * Parameters   : pespconn -- the espconn used to connetion with the host
+ * Returns      : none
+*******************************************************************************/
+LOCAL void
+user_esp_platform_upgrade_rsp(void *arg)
+{
+    struct upgrade_server_info *server = arg;
+
+    if(server != NULL){
+        free(server->url);
+        server->url = NULL;
+        free(server);
+        server = NULL;
+    }
+}
+
+/******************************************************************************
+ * FunctionName : user_esp_platform_upgrade_begin
+ * Description  : Processing the received data from the server
+ * Parameters   : pespconn -- the espconn used to connetion with the host
+ *                server -- upgrade param
+ * Returns      : none
+*******************************************************************************/
+int user_esp_platform_upgrade_begin(void)
+{
+    char cUserBin[10] = {0};
+    struct upgrade_server_info *pUpgradeServer;
+
+    pUpgradeServer = (struct upgrade_server_info *)zalloc(sizeof(struct upgrade_server_info));
+    if (NULL == pUpgradeServer){
+    	return (-1);
+    }
+//    server->pclient_param = NULL;
+    bzero(&pUpgradeServer->sockaddrin, sizeof(struct sockaddr_in));
+
+    pUpgradeServer->sockaddrin.sin_family = AF_INET;
+    // I am quite clear what I am doing, compiler doesn't know
+    pUpgradeServer->sockaddrin.sin_addr.s_addr = inet_addr(tSmartSocketParameter.cFW_UpgradeServer);
+    pUpgradeServer->sockaddrin.sin_port = htons(tSmartSocketParameter.unFW_UpgradePort);
+
+    pUpgradeServer->check_cb = user_esp_platform_upgrade_rsp;
+    //server->check_times = 120000;/*rsp once finished*/
+
+    if (pUpgradeServer->url == NULL) {
+        pUpgradeServer->url = (uint8 *)zalloc(512);
+    }
+
+    if (system_upgrade_userbin_check() == UPGRADE_FW_BIN1) {
+        memcpy(cUserBin, "user2.bin", 10);
+    } else if (system_upgrade_userbin_check() == UPGRADE_FW_BIN2) {
+        memcpy(cUserBin, "user1.bin", 10);
+    }
+
+    sprintf(pUpgradeServer->url, "GET /v1/device/rom/?action=download_rom&version=%s&filename=%s HTTP/1.0\r\nHost: "
+    		FW_UPGRADE_DOMAIN":%d\r\n"pheadbuffer"",
+			tSmartSocketParameter.cFW_UpgradeVersion, cUserBin,
+			ntohs(pUpgradeServer->sockaddrin.sin_port), tSmartSocketParameter.cFW_UpgradeToken);//  IPSTR  IP2STR(server->sockaddrin.sin_addr.s_addr)
+    ESP_DBG("%s\n",pUpgradeServer->url);
+
+    if (system_upgrade_start(pUpgradeServer) == true) {
+        ESP_DBG("upgrade is already started\n");
+    }
+
+    return 0;
+}
+
 
 void wifi_conn_event_cb(System_Event_t *event)
 {
@@ -209,37 +279,6 @@ user_esp_platform_set_active(uint8 activeflag)
 
     system_param_save_with_protect(ESP_PARAM_START_SEC, &esp_param, sizeof(esp_param));
 }
-///******************************************************************************
-// * FunctionName : user_esp_platform_set_connect_status
-// * Description  : set each connection step's status
-// * Parameters   : none
-// * Returns      : status
-//*******************************************************************************/
-//
-//void
-//user_esp_platform_set_connect_status(uint8 status)
-//{
-//    device_status = status;
-//}
-
-///******************************************************************************
-// * FunctionName : user_esp_platform_get_connect_status
-// * Description  : get each connection step's status
-// * Parameters   : none
-// * Returns      : status
-//*******************************************************************************/
-//uint8
-//user_esp_platform_get_connect_status(void)
-//{
-//    uint8 status = wifi_station_get_connect_status();
-//
-//    if (status == STATION_GOT_IP) {
-//        status = (device_status == 0) ? DEVICE_CONNECTING : device_status;
-//    }
-//
-//    ESP_DBG("status %d\n", status);
-//    return status;
-//}
 
 /******************************************************************************
  * FunctionName : user_esp_platform_parse_nonce
@@ -505,6 +544,11 @@ user_esp_platform_maintainer(void *pvParameters)
     	if ((1 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
     			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
     		user_plug_relay_schedule_action(sntp_get_current_timestamp());
+    	}
+
+    	if ((1 == tSmartSocketParameter.tConfigure.bFWUpgradeStart) &&
+    			(1 == tSmartSocketParameter.tConfigure.bIPGotten)){
+    		tSmartSocketParameter.tConfigure.bFWUpgradeStart = 0;
     	}
 
     	vTaskDelay(1000/portTICK_RATE_MS);
