@@ -31,6 +31,7 @@
 #define MIN_CURRENT_THRESHOLD			1
 
 #define MAX_SNTP_SERVER_ADDR_LEN		64
+#define MAX_UPDATE_SERVER_HOST_LEN		64
 #define MAX_SNTP_SERVER_NUM				3
 #define MAX_UPDATE_SERVER_ADDR_LEN		MAX_SNTP_SERVER_ADDR_LEN
 #define MAX_TCP_PORT					0xFFFF
@@ -105,6 +106,7 @@ typedef struct SmartSocketParameter{
 	}tConfigure;
 	char cSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
 	char cFW_UpgradeServer[MAX_UPDATE_SERVER_ADDR_LEN];
+	char cFW_UpgradeHost[MAX_UPDATE_SERVER_HOST_LEN];
 	uint16 unFW_UpgradePort;
 	char cFW_UpgradeToken[UPGRADE_TOKEN_LENGTH + 1];
 	char cFW_UpgradeVersion[UPGRADE_VERSION_LENGTH + 1];

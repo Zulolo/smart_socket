@@ -337,7 +337,7 @@ system_upgrade_start(struct upgrade_server_info *server)
         if(pdPASS == ret){
             os_timer_disarm(&upgrade_timer);
             os_timer_setfn(&upgrade_timer, (os_timer_func_t *)upgrade_check, server);
-            os_timer_arm(&upgrade_timer, 1200000, 0);
+            os_timer_arm(&upgrade_timer, 300000, 0);
         }
     }
  

@@ -548,6 +548,7 @@ system_status_reset(const char *pValue)
  * Returns      : result
 {
 "set":{"upgrade_url":"192.168.31.157",
+		"upgrade_host":"iot.zulolo.cn",
 		"upgrade_port":80,
 		"upgrade_token":"123456789ABCDEF...",
 		"upgrade_version":"1.0.2.5"}
@@ -580,6 +581,14 @@ user_upgrade_start(const char *pValue)
     }
     strncpy(tSmartSocketParameter.cFW_UpgradeServer, pJsonSub->valuestring, sizeof(tSmartSocketParameter.cFW_UpgradeServer));
     tSmartSocketParameter.cFW_UpgradeServer[sizeof(tSmartSocketParameter.cFW_UpgradeServer) - 1] = '\0';
+
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_host")) == NULL){
+        printf("cJSON_GetObjectItem upgrade_host fail\n");
+        cJSON_Delete(pJson);
+        return (-1);
+    }
+    strncpy(tSmartSocketParameter.cFW_UpgradeHost, pJsonSub->valuestring, sizeof(tSmartSocketParameter.cFW_UpgradeHost));
+    tSmartSocketParameter.cFW_UpgradeHost[sizeof(tSmartSocketParameter.cFW_UpgradeHost) - 1] = '\0';
 
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_token")) == NULL){
         printf("cJSON_GetObjectItem update_token fail\n");

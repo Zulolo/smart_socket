@@ -127,9 +127,8 @@ int user_esp_platform_upgrade_begin(void)
         memcpy(cUserBin, "user1.bin", 10);
     }
 
-    sprintf(pUpgradeServer->url, "GET /v1/device/rom/?action=download_rom&version=%s&filename=%s HTTP/1.0\r\nHost: "
-    		FW_UPGRADE_DOMAIN":%d\r\n"pheadbuffer"",
-			tSmartSocketParameter.cFW_UpgradeVersion, cUserBin,
+    sprintf(pUpgradeServer->url, "GET /v1/device/rom/?action=download_rom&version=%s&filename=%s HTTP/1.0\r\nHost: %s:%d\r\n"pheadbuffer"",
+			tSmartSocketParameter.cFW_UpgradeVersion, cUserBin, tSmartSocketParameter.cFW_UpgradeHost,
 			ntohs(pUpgradeServer->sockaddrin.sin_port), tSmartSocketParameter.cFW_UpgradeToken);//  IPSTR  IP2STR(server->sockaddrin.sin_addr.s_addr)
     ESP_DBG("%s\n",pUpgradeServer->url);
 
