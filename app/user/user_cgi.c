@@ -86,13 +86,13 @@ user_binfo_get(cJSON *pcjson, const char* pname)
  * Description  : get the user bin paramer as a JSON format
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
-{"Version":{"hardware":"0.1","sdk_version":"1.1.2","iot_version":"v1.0.5t23701(a)"},
-"Device":{"product":"Plug","manufacturer":"Espressif Systems"}}
+{"Version":{"hardware":"0.3","sdk_version":"1.1.2","iot_version":"v1.0.5t23701(a)"},
+"Device":{"product":"Plug","manufacturer":"Hai mei xinag hao"}}
 *******************************************************************************/
 LOCAL int  
 system_info_get(cJSON *pcjson, const char* pname )
 {
-    char buff[16]={0};
+    char buff[64]={0};
 
     cJSON * pSubJson_Version = cJSON_CreateObject();
     if(NULL == pSubJson_Version){
@@ -110,8 +110,8 @@ system_info_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddStringToObject(pSubJson_Version,"hardware","0.3");
     cJSON_AddStringToObject(pSubJson_Version,"sdk_version",system_get_sdk_version());
-    sprintf(buff,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
-    IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
+    sprintf(buff,"%s%d.%d.%s %d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
+    IOT_VERSION_MINOR,__TIME__,device_type,UPGRADE_FALG);
     cJSON_AddStringToObject(pSubJson_Version,"iot_version",buff);
     
     cJSON_AddStringToObject(pSubJson_Device,"manufacture","Ming zhi hai mei qi hao");
@@ -547,11 +547,11 @@ system_status_reset(const char *pValue)
  * Parameters   : pcjson -- A pointer to a JSON formated string
  * Returns      : result
 {
-"set":{"upgrade_url":"192.168.31.157",
+"set":{"upgrade_server":"120.41.31.19",
 		"upgrade_host":"iot.zulolo.cn",
 		"upgrade_port":80,
 		"upgrade_token":"123456789ABCDEF...",
-		"upgrade_version":"1.0.2.5"}
+		"upgrade_url":"/Smart_plug_upgrade/fw_download/version/filename"}
 }
 *******************************************************************************/
 LOCAL int
@@ -574,8 +574,8 @@ user_upgrade_start(const char *pValue)
         return (-1);
     }
 
-    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_url")) == NULL){
-        printf("cJSON_GetObjectItem update_url fail\n");
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_server")) == NULL){
+        printf("cJSON_GetObjectItem upgrade_server fail\n");
         cJSON_Delete(pJson);
         return (-1);
     }
@@ -598,13 +598,13 @@ user_upgrade_start(const char *pValue)
     memcpy(tSmartSocketParameter.cFW_UpgradeToken, pJsonSub->valuestring, UPGRADE_TOKEN_LENGTH);
     tSmartSocketParameter.cFW_UpgradeToken[UPGRADE_TOKEN_LENGTH] = '\0';
 
-    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_version")) == NULL){
-        printf("cJSON_GetObjectItem upgrade_version fail\n");
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_url")) == NULL){
+        printf("cJSON_GetObjectItem upgrade_url fail\n");
         cJSON_Delete(pJson);
         return (-1);
     }
-    memcpy(tSmartSocketParameter.cFW_UpgradeVersion, pJsonSub->valuestring, UPGRADE_VERSION_LENGTH);
-    tSmartSocketParameter.cFW_UpgradeVersion[UPGRADE_VERSION_LENGTH] = '\0';
+    memcpy(tSmartSocketParameter.cFW_UpgradeUrl, pJsonSub->valuestring, UPGRADE_URL_LENGTH);
+    tSmartSocketParameter.cFW_UpgradeUrl[UPGRADE_URL_LENGTH] = '\0';
 
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_port")) != NULL){
         if ((pJsonSub->valueint > 0) && (pJsonSub->valueint <= MAX_TCP_PORT)){
@@ -612,6 +612,7 @@ user_upgrade_start(const char *pValue)
         }
     }
 
+    user_esp_platform_upgrade_begin();
     return 0;
 }
 

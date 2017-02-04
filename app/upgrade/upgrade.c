@@ -280,7 +280,9 @@ finish:
         server->check_cb(server);
     }
     vTaskDelay(100 / portTICK_RATE_MS);
-    vTaskDelete(NULL);
+//    vTaskDelete(NULL);
+
+    system_upgrade_reboot();
 }
 
 /******************************************************************************

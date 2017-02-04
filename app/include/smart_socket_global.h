@@ -36,7 +36,7 @@
 #define MAX_UPDATE_SERVER_ADDR_LEN		MAX_SNTP_SERVER_ADDR_LEN
 #define MAX_TCP_PORT					0xFFFF
 #define UPGRADE_TOKEN_LENGTH			32
-#define UPGRADE_VERSION_LENGTH			16
+#define UPGRADE_URL_LENGTH				128
 
 #define RELAY_SCHEDULE_NUM				4
 #define RELAY_SCHEDULE_MAX_SEC_DAY		(SECSPERDAY)
@@ -109,7 +109,7 @@ typedef struct SmartSocketParameter{
 	char cFW_UpgradeHost[MAX_UPDATE_SERVER_HOST_LEN];
 	uint16 unFW_UpgradePort;
 	char cFW_UpgradeToken[UPGRADE_TOKEN_LENGTH + 1];
-	char cFW_UpgradeVersion[UPGRADE_VERSION_LENGTH + 1];
+	char cFW_UpgradeUrl[UPGRADE_URL_LENGTH + 1];
 	RelaySchedule_t tRelaySchedule[RELAY_SCHEDULE_NUM];
 	float fCurrentThreshold;
 	uint32 unTrendRecordNum;

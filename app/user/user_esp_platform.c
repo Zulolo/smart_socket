@@ -99,7 +99,7 @@ user_esp_platform_upgrade_rsp(void *arg)
 *******************************************************************************/
 int user_esp_platform_upgrade_begin(void)
 {
-    char cUserBin[10] = {0};
+//    char cUserBin[10] = {0};
     struct upgrade_server_info *pUpgradeServer;
 
     pUpgradeServer = (struct upgrade_server_info *)zalloc(sizeof(struct upgrade_server_info));
@@ -120,15 +120,15 @@ int user_esp_platform_upgrade_begin(void)
     if (pUpgradeServer->url == NULL) {
         pUpgradeServer->url = (uint8 *)zalloc(512);
     }
+//
+//    if (system_upgrade_userbin_check() == UPGRADE_FW_BIN1) {
+//        memcpy(cUserBin, "user2.bin", 10);
+//    } else if (system_upgrade_userbin_check() == UPGRADE_FW_BIN2) {
+//        memcpy(cUserBin, "user1.bin", 10);
+//    }
 
-    if (system_upgrade_userbin_check() == UPGRADE_FW_BIN1) {
-        memcpy(cUserBin, "user2.bin", 10);
-    } else if (system_upgrade_userbin_check() == UPGRADE_FW_BIN2) {
-        memcpy(cUserBin, "user1.bin", 10);
-    }
-
-    sprintf(pUpgradeServer->url, "GET /v1/device/rom/?action=download_rom&version=%s&filename=%s HTTP/1.0\r\nHost: %s:%d\r\n"pheadbuffer"",
-			tSmartSocketParameter.cFW_UpgradeVersion, cUserBin, tSmartSocketParameter.cFW_UpgradeHost,
+    sprintf(pUpgradeServer->url, "GET %s HTTP/1.0\r\nHost: %s:%d\r\n"pheadbuffer"",
+			tSmartSocketParameter.cFW_UpgradeUrl, tSmartSocketParameter.cFW_UpgradeHost,
 			ntohs(pUpgradeServer->sockaddrin.sin_port), tSmartSocketParameter.cFW_UpgradeToken);//  IPSTR  IP2STR(server->sockaddrin.sin_addr.s_addr)
     ESP_DBG("%s\n",pUpgradeServer->url);
 
