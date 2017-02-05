@@ -131,7 +131,7 @@ BOOL upgrade_data_load(char *pusrdata, unsigned short length)
                 length =length -(totallength- sumlength);
             }
             
-            os_printf(">>>recv %dB, %dB left\n",totallength,sumlength-totallength);
+//            os_printf(">>>recv %dB, %dB left\n",totallength,sumlength-totallength);
             system_upgrade(pusrdata, length);
             
         } else {
@@ -157,7 +157,7 @@ void upgrade_task(void *pvParameters)
     int sta_socket;
     int retry_count = 0;
     struct ip_info ipconfig;
-    
+
     struct upgrade_server_info *server = pvParameters;
 
     flash_erased=FALSE;
@@ -230,7 +230,7 @@ void upgrade_task(void *pvParameters)
                 goto finish;
             }
 
-            os_printf("upgrade_task %d word left\n",uxTaskGetStackHighWaterMark(NULL));
+//            os_printf("upgrade_task %d word left\n",uxTaskGetStackHighWaterMark(NULL));
             
         }
         
@@ -276,13 +276,12 @@ finish:
     upgrade_deinit();
     
     os_printf("\n Exit upgrade task.\n");
+
     if (server->check_cb != NULL) {
         server->check_cb(server);
     }
     vTaskDelay(100 / portTICK_RATE_MS);
-//    vTaskDelete(NULL);
-
-    system_upgrade_reboot();
+    vTaskDelete(NULL);
 }
 
 /******************************************************************************

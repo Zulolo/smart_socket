@@ -82,6 +82,9 @@ user_esp_platform_upgrade_rsp(void *arg)
 {
     struct upgrade_server_info *server = arg;
 
+    if (true == server->upgrade_flag){
+    	system_upgrade_reboot();
+    }
     if(server != NULL){
         free(server->url);
         server->url = NULL;
@@ -127,9 +130,9 @@ int user_esp_platform_upgrade_begin(void)
 //        memcpy(cUserBin, "user1.bin", 10);
 //    }
 
-    sprintf(pUpgradeServer->url, "GET %s HTTP/1.0\r\nHost: %s:%d\r\n"pheadbuffer"",
-			tSmartSocketParameter.cFW_UpgradeUrl, tSmartSocketParameter.cFW_UpgradeHost,
-			ntohs(pUpgradeServer->sockaddrin.sin_port), tSmartSocketParameter.cFW_UpgradeToken);//  IPSTR  IP2STR(server->sockaddrin.sin_addr.s_addr)
+    sprintf(pUpgradeServer->url, "GET %s%u HTTP/1.0\r\nHost: %s:%d\r\n"pheadbuffer"",
+			tSmartSocketParameter.cFW_UpgradeUrl, ((system_upgrade_userbin_check() == USER_BIN1) ? USER_BIN2 : USER_BIN1) + 1,
+					tSmartSocketParameter.cFW_UpgradeHost,ntohs(pUpgradeServer->sockaddrin.sin_port), tSmartSocketParameter.cFW_UpgradeToken);//  IPSTR  IP2STR(server->sockaddrin.sin_addr.s_addr)
     ESP_DBG("%s\n",pUpgradeServer->url);
 
     if (system_upgrade_start(pUpgradeServer) == true) {

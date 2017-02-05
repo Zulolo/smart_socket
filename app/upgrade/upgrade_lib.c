@@ -69,6 +69,7 @@ system_upgrade_internal(struct upgrade_param *upgrade, uint8 *data, u32 len)
 {
     bool ret = false;
     uint16 secnm=0;
+
     if(data == NULL || len == 0)
     {
         return true;
@@ -181,6 +182,7 @@ system_upgrade_init(void)
 {
     uint32 user_bin2_start,user_bin1_start;
 	uint8 spi_size_map = system_get_flash_size_map();
+//	uint16_t unSecIndex;
 	
 	if (upgrade == NULL) {
         upgrade = (struct upgrade_param *)zalloc(sizeof(struct upgrade_param));
@@ -202,11 +204,17 @@ system_upgrade_init(void)
 			upgrade->fw_bin_sec_num = 59;
 	}
    
+	os_printf("Current using bin is: %u\n", system_upgrade_userbin_check());
     upgrade->fw_bin_sec = (system_upgrade_userbin_check() == USER_BIN1) ? user_bin2_start : user_bin1_start;
 
     upgrade->fw_bin_addr = upgrade->fw_bin_sec * SPI_FLASH_SEC_SIZE;
     
     upgrade->fw_bin_sec_earse = upgrade->fw_bin_sec;
+
+//    for (unSecIndex = upgrade->fw_bin_sec_earse; unSecIndex < (upgrade->fw_bin_sec_earse + upgrade->fw_bin_sec_num); unSecIndex++){
+//    	spi_flash_erase_sector(unSecIndex);
+//    }
+
 }
 
 /******************************************************************************

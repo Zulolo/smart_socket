@@ -11,7 +11,7 @@
 #include "driver/gpio.h"
 #include "lwip/apps/sntp_time.h"
 
-#define FLASH_SECTOR_SIZE				0x1000
+#define FLASH_SECTOR_SIZE				SPI_FLASH_SEC_SIZE
 #define FLASH_PROTECT_SECTORS			3			// If using flash protecting, writing one sector will actually cost 3 sectors
 #define FLASH_USER_DATA_OFFSET			0x200000	// for 4096KB flash (option 6)
 #define GET_USER_DATA_ADDR(tType)		(FLASH_USER_DATA_OFFSET + FLASH_SECTOR_SIZE * FLASH_PROTECT_SECTORS * (tType))

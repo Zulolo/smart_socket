@@ -65,6 +65,7 @@ calc_img_crc(unsigned int sumlength,unsigned int *img_crc)
 	int fd;
 	int ret;
 	int i = 0;
+//	int nPrintIndex;
 	uint8 error = 0;
 	unsigned char *buf = (char *)zalloc(BUFSIZE);
 	if(buf == NULL){
@@ -84,6 +85,9 @@ calc_img_crc(unsigned int sumlength,unsigned int *img_crc)
 				os_printf("spi_flash_read error %d\n",error);
 				return -1;
 		}
+//		for (nPrintIndex = 0; nPrintIndex < CRC_BLOCK_SIZE; nPrintIndex++){
+//			os_printf("%02X", buf[nPrintIndex]);
+//		}
 		crc = crc32(crc, buf, BUFSIZE);		
 	}
 	if(sec_last > 0 ) {
@@ -108,16 +112,17 @@ upgrade_crc_check(uint16 fw_bin_sec ,unsigned int sumlength)
 	unsigned int img_crc;
 	unsigned int flash_crc = 0xFF;
 	start_sec = fw_bin_sec;
+	os_printf("start_sec is: %u, sumlength is: %u\n", start_sec, sumlength);
 	if ( 0 != init_crc_table()) {
 		return false;
 	}
-	ret = calc_img_crc(sumlength - 4,&img_crc);
+	ret = calc_img_crc(sumlength - 4, &img_crc);
 	if (ret < 0) {
 		return false;
 	}
-	os_printf("img_crc = %u\n",img_crc);
-	spi_flash_read(start_sec * SPI_FLASH_SEC_SIZE + sumlength - 4,&flash_crc, 4);
-    os_printf("flash_crc = %u\n",flash_crc);
+	os_printf("CRC calculated from programmed flash is: 0x%08X\n", img_crc);
+	spi_flash_read(start_sec * SPI_FLASH_SEC_SIZE + sumlength - 4, &flash_crc, 4);
+    os_printf("CRC read from programmed flash is: 0x%08X\n",flash_crc);
 	if(img_crc == flash_crc) {
 	    return 0;
 	} else {

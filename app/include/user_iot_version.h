@@ -4,7 +4,7 @@
 #include "user_config.h"
 
 #define IOT_VERSION_MAJOR       1U
-#define IOT_VERSION_MINOR       0U
+#define IOT_VERSION_MINOR       7U
 #define IOT_VERSION_REVISION    6U
 
 #define VERSION_NUM   (IOT_VERSION_MAJOR * 1000 + IOT_VERSION_MINOR * 100 + IOT_VERSION_REVISION)

@@ -1,9 +1,5 @@
 #  copyright (c) 2010 Espressif System
 #
-
-#######################################
-### Actually this link file will not be used!!
-## The real using link file if the one in $SDK_PATH path
 ifndef PDIR
 
 endif
@@ -25,7 +21,7 @@ else
 endif
 
 BOOT?=new
-APP?=1
+APP?=2
 SPI_SPEED?=40
 SPI_MODE?=QIO
 SPI_SIZE_MAP?=6
@@ -262,6 +258,7 @@ endif
 	@echo ""
 	@echo "!!!"
 	@echo "SDK_PATH: $(SDK_PATH)"
+	@echo "boot value: $(boot)"
 	
 ifeq ($(app), 0)
 	@python $(SDK_PATH)/tools/gen_appbin.py $< 0 $(mode) $(freqdiv) $(size_map)

@@ -177,9 +177,9 @@ void initCS5463(void)
 //
 	uint8_t unPara[3];
 
-	unPara[0] = 0x80;
-	unPara[1] = 0;
-	unPara[2] = 0;
+	unPara[0] = 0xFF;
+	unPara[1] = 0xFF;
+	unPara[2] = 0xFF;
 	CS5463IF_WriteReg(CS5463_CMD_WR_STATUS, unPara, sizeof(unPara));
 
 	unPara[0] = 0;
@@ -238,6 +238,7 @@ void CS5463_Manager(void *pvParameters)
 		fCS5463_V = (float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
 
+		// Status
 		CS5463IF_Read(CS5463_CMD_RD_STATUS, unCS5463ReadData, sizeof(unCS5463ReadData));
 		unCS5463_Status = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
