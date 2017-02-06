@@ -44,7 +44,7 @@ typedef enum{
 
 void CS5463_Manager(void *pvParameters);
 uint32_t CS5463_unGetStatus(void);
-uint32_t CS5463_unGetCurrent(void);
+float CS5463_fGetCurrent(void);
 float CS5463_fGetVoltage(void);
 float CS5463_fGetPower(void);
 float CS5463_fGetTemperature(void);

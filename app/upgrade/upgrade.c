@@ -157,6 +157,8 @@ void upgrade_task(void *pvParameters)
     int sta_socket;
     int retry_count = 0;
     struct ip_info ipconfig;
+//    int nPrintFLashIndex;
+//    unsigned char unFlashReadBuf[8];
 
     struct upgrade_server_info *server = pvParameters;
 
@@ -248,12 +250,20 @@ void upgrade_task(void *pvParameters)
 finish:
 
     os_timer_disarm(&upgrade_timer);
-
+//    vTaskDelay(1000 / portTICK_RATE_MS);
 	if(upgrade_crc_check(system_get_fw_start_sec(),sumlength) != 0)
 	{
 		printf("upgrade crc check failed !\n");
 		server->upgrade_flag = false;
         system_upgrade_flag_set(UPGRADE_FLAG_IDLE);	
+
+//        for (nPrintFLashIndex = system_get_fw_start_sec() * SPI_FLASH_SEC_SIZE;
+//        		nPrintFLashIndex < system_get_fw_start_sec() * SPI_FLASH_SEC_SIZE + sumlength;
+//        		nPrintFLashIndex+=sizeof(unFlashReadBuf)){
+//        	spi_flash_read(nPrintFLashIndex, (unsigned int *)unFlashReadBuf, sizeof(unFlashReadBuf));
+//        	printf("%02X%02X%02X%02X%02X%02X%02X%02X", unFlashReadBuf[0], unFlashReadBuf[1], unFlashReadBuf[2], unFlashReadBuf[3],
+//        			unFlashReadBuf[4], unFlashReadBuf[5], unFlashReadBuf[6], unFlashReadBuf[7]);
+//        }
 	} else {		
 		if(retry_count == UPGRADE_RETRY_TIMES){
 			/*retry too many times, fail*/

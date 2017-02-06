@@ -28,9 +28,9 @@
 #define CS5463_WR_REG_CMD		0x40
 
 static int8_t fCS5463_T;
-static uint32_t unCS5463_I;
+static float fCS5463_IRMS;
 static uint32_t unCS5463_Status;
-static float fCS5463_V;
+static float fCS5463_VRMS;
 static float fCS5463_P;
 
 //FLASH_SECTOR_SIZE
@@ -160,8 +160,8 @@ trend_record_callback(void *arg)
 {
 	TrendContent_t tValue;
 	tValue.fTemperature = fCS5463_T;
-	tValue.fCurrent = unCS5463_I;
-	tValue.fVoltage = fCS5463_V;
+	tValue.fCurrent = fCS5463_IRMS;
+	tValue.fVoltage = fCS5463_VRMS;
 	tValue.fPower = fCS5463_P;
 	tValue.unTime = sntp_get_current_timestamp();
     DAT_bTrendRecordAdd(tValue);
@@ -229,13 +229,13 @@ void CS5463_Manager(void *pvParameters)
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Current
-		CS5463IF_Read(CS5463_CMD_RD_I, unCS5463ReadData, sizeof(unCS5463ReadData));
-		unCS5463_I = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]); //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
+		CS5463IF_Read(CS5463_CMD_RD_IRMS, unCS5463ReadData, sizeof(unCS5463ReadData));
+		fCS5463_IRMS = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2])/0xFFFFFF; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Voltage
-		CS5463IF_Read(CS5463_CMD_RD_V, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_V = (float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		CS5463IF_Read(CS5463_CMD_RD_VRMS, unCS5463ReadData, sizeof(unCS5463ReadData));
+		fCS5463_VRMS = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2])/0xFFFFFF; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Status
@@ -255,14 +255,14 @@ uint32_t CS5463_unGetStatus(void)
 	return unCS5463_Status;
 }
 
-uint32_t CS5463_unGetCurrent(void)
+float CS5463_fGetCurrent(void)
 {
-	return unCS5463_I;
+	return fCS5463_IRMS;
 }
 
 float CS5463_fGetVoltage(void)
 {
-	return fCS5463_V;
+	return fCS5463_VRMS;
 }
 
 float CS5463_fGetPower(void)

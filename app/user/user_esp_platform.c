@@ -85,6 +85,7 @@ user_esp_platform_upgrade_rsp(void *arg)
     if (true == server->upgrade_flag){
     	system_upgrade_reboot();
     }
+
     if(server != NULL){
         free(server->url);
         server->url = NULL;

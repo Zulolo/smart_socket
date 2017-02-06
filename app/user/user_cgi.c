@@ -169,7 +169,7 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_unGetCurrent());
+    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_fGetCurrent());
     cJSON_AddStringToObject(pSubJson_response, "unit", "A");
     return 0;
 }
@@ -529,7 +529,7 @@ LOCAL int
 user_set_reboot(const char *pValue)
 {
     printf("user_set_reboot %s \n", pValue);
-    
+    system_restart();
     return 0;
 }
 
