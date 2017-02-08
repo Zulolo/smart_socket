@@ -60,6 +60,7 @@ Accept-Language: zh-CN,zh;q=0.8\r\n\r\n"
 #define REBOOT_MAGIC  (12345)
 
 LOCAL int  user_boot_flag;
+LOCAL uint8 ping_status=TRUE;
 
 struct esp_platform_saved_param esp_param;
 
@@ -501,6 +502,216 @@ void reconnectAP(void)
 }
 
 /******************************************************************************
+ * FunctionName : user_esp_platform_data_process
+ * Description  : Processing the received data from the server
+ * Parameters   : arg -- Additional argument to pass to the callback function
+ *                pusrdata -- The received data (or NULL when the connection has been closed!)
+ *                length -- The length of received data
+ * Returns      : none
+*******************************************************************************/
+LOCAL void
+user_esp_platform_data_process(struct client_conn_param *pclient_param, char *pusrdata, unsigned short length)
+{
+    char *pstr = NULL;
+    LOCAL char pbuffer[1024 * 2] = {0};//use heap jeremy
+
+    ESP_DBG("user_esp_platform_data_process %s, %d\n", pusrdata,length);
+
+    if (length == 1460) {
+        /*save the first segment of a big json data*/
+        memcpy(pbuffer, pusrdata, length);
+
+    } else {
+        /*put this part after the pirst segment,
+         *to deal with the complete data(1460<len<2048) this way */
+
+        if( length<=(2048 - strlen(pbuffer)) )
+            memcpy(pbuffer + strlen(pbuffer), pusrdata, length);
+        else
+            os_printf("ERR:arr_overflow,%u,%d,%d\n",__LINE__,length, 2048 - strlen(pbuffer) );
+
+        if ((pstr = (char *)strstr(pbuffer, "\"status\":")) != NULL) {
+            if (strncmp(pstr + 10, "400", 3) == 0) {
+                printf("ERROR! invalid json string.\n");
+                if(device_status = DEVICE_CONNECTING){
+                    device_status = DEVICE_ACTIVE_FAIL;
+                }
+
+                /*data is handled, zero the buffer bef exit*/
+                memset(pbuffer, 0, sizeof(pbuffer));
+                return;
+            }
+        }
+
+        if ((pstr = (char *)strstr(pbuffer, "\"activate_status\": ")) != NULL &&
+                user_esp_platform_parse_nonce(pbuffer) == active_nonce) {
+
+            if (strncmp(pstr + 19, "1", 1) == 0) {
+                printf("device activates successful.\n");
+                device_status = DEVICE_ACTIVE_DONE;
+                esp_param.activeflag = 1;
+                system_param_save_with_protect(ESP_PARAM_START_SEC, &esp_param, sizeof(esp_param));
+                user_esp_platform_sent(pclient_param);
+                if(LIGHT_DEVICE){
+                    //system_restart(); //Jeremy.L why restart?
+                }
+            } else {
+                printf("device activates failed.\n");
+                device_status = DEVICE_ACTIVE_FAIL;
+            }
+        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_upgrade\"")) != NULL) {
+            if ((pstr = (char *)strstr(pbuffer, "\"version\":")) != NULL) {
+
+                struct upgrade_server_info *server = NULL;
+                int nonce = user_esp_platform_parse_nonce(pbuffer);
+                user_platform_rpc_set_rsp(pclient_param, nonce);
+                server = (struct upgrade_server_info *)zalloc(sizeof(struct upgrade_server_info));
+                memcpy(server->upgrade_version, pstr + 12, 16);
+                server->upgrade_version[15] = '\0';
+                sprintf(server->pre_version,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
+                        IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
+                user_esp_platform_upgrade_begin(pclient_param, server);
+            }
+        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_reboot\"")) != NULL) {
+            os_timer_disarm(&client_timer);
+            os_timer_setfn(&client_timer, (os_timer_func_t *)system_upgrade_reboot, NULL);
+            os_timer_arm(&client_timer, 1000, 0);
+        } else if ((pstr = (char *)strstr(pbuffer, "/v1/device/timers/")) != NULL) {
+            int nonce = user_esp_platform_parse_nonce(pbuffer);
+            user_platform_rpc_set_rsp(pclient_param, nonce);
+            //printf("pclient_param sockfd %d\n",pclient_param->sock_fd);
+            //os_timer_disarm(&client_timer);
+            //os_timer_setfn(&client_timer, (os_timer_func_t *)user_platform_timer_get, pclient_param);
+            //os_timer_arm(&client_timer, 2000, 0);
+            user_platform_timer_get(pclient_param);
+
+        } else if ((pstr = (char *)strstr(pbuffer, "\"method\": ")) != NULL) {
+            if (strncmp(pstr + 11, "GET", 3) == 0) {
+                user_esp_platform_get_info(pclient_param, pbuffer);
+            } else if (strncmp(pstr + 11, "POST", 4) == 0) {
+                user_esp_platform_set_info(pclient_param, pbuffer);
+            }
+
+        } else if ((pstr = (char *)strstr(pbuffer, "ping success")) != NULL) {
+            printf("ping success\n");
+            ping_status = TRUE;
+
+        } else if ((pstr = (char *)strstr(pbuffer, "send message success")) != NULL) {
+        } else if ((pstr = (char *)strstr(pbuffer, "timers")) != NULL) {
+            user_platform_timer_start(pusrdata);
+        }
+
+        else if ((pstr = (char *)strstr(pbuffer, "device")) != NULL) {
+            user_platform_timer_get(pclient_param);
+        }
+
+        /*data is handled, zero the buffer bef exit*/
+        memset(pbuffer, 0, sizeof(pbuffer));
+    }
+
+}
+
+/******************************************************************************
+ * FunctionName : user_esp_platform_check_conection
+ * Description  : check and try to rebuild connection, parse ESP dns domain.
+ * Parameters   : void
+ * Returns      : connection stat as blow
+ *enum{
+ *  AP_DISCONNECTED = 0,
+ *  AP_CONNECTED,
+ *  DNS_SUCESSES,
+ *};
+*******************************************************************************/
+LOCAL BOOL
+user_esp_platform_check_conection(void)
+{
+    u8 single_ap_retry_count = 0;
+    u8 dns_retry_count = 0;
+    u8 dns_ap_retry_count= 0;
+
+    struct ip_info ipconfig;
+    struct hostent* phostent = NULL;
+
+    memset(&ipconfig, 0, sizeof(ipconfig));
+    wifi_get_ip_info(STATION_IF, &ipconfig);
+
+
+    struct station_config *sta_config = (struct station_config *)zalloc(sizeof(struct station_config)*5);
+    int ap_num = wifi_station_get_ap_info(sta_config);
+    free(sta_config);
+
+#define MAX_DNS_RETRY_CNT 20
+#define MAX_AP_RETRY_CNT 200
+
+    do{
+        //what if the ap connect well but no ip offer, wait and wait again, time could be more longer
+        if(dns_retry_count == MAX_DNS_RETRY_CNT){
+            if(ap_num >= 2) user_esp_platform_ap_change();
+        }
+        dns_retry_count = 0;
+
+        while( (ipconfig.ip.addr == 0 || wifi_station_get_connect_status() != STATION_GOT_IP)){
+
+            /* if there are wrong while connecting to some AP, change to next and reset counter */
+            if (wifi_station_get_connect_status() == STATION_WRONG_PASSWORD ||
+                    wifi_station_get_connect_status() == STATION_NO_AP_FOUND ||
+                    wifi_station_get_connect_status() == STATION_CONNECT_FAIL ||
+                    (single_ap_retry_count++ > MAX_AP_RETRY_CNT)) {
+                if(ap_num >= 2){
+                    ESP_DBG("try other APs ...\n");
+                    user_esp_platform_ap_change();
+                }
+                ESP_DBG("connecting...\n");
+                single_ap_retry_count = 0;
+            }
+
+            vTaskDelay(3000/portTICK_RATE_MS);
+            wifi_get_ip_info(STATION_IF, &ipconfig);
+        }
+
+        do{
+            ESP_DBG("STA trying to parse esp domain name!\n");
+            phostent = (struct hostent *)gethostbyname(FW_UPGRADE_DOMAIN);
+
+            if(phostent == NULL){
+                vTaskDelay(500/portTICK_RATE_MS);
+            }else{
+                printf("Get DNS OK!\n");
+                break;
+            }
+
+        }while(dns_retry_count++ < MAX_DNS_RETRY_CNT);
+
+    }while(NULL == phostent && dns_ap_retry_count++ < AP_CACHE_NUMBER);
+
+    if(phostent!=NULL){
+
+        if( phostent->h_length <= 4 )
+            memcpy(&esp_server_ip,(char*)(phostent->h_addr_list[0]),phostent->h_length);
+        else
+            os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, phostent->h_length );
+
+
+        printf("ESP_DOMAIN IP address: %s\n", inet_ntoa(esp_server_ip));
+
+        ping_status = TRUE;
+        free(phostent);
+        phostent = NULL;
+
+        return DNS_SUCESSES;
+    } else {
+        return DNS_FAIL;
+    }
+
+    if(ipconfig.ip.addr != 0){
+        return AP_CONNECTED;
+    }else{
+        return AP_DISCONNECTED;
+    }
+}
+
+
+/******************************************************************************
  * FunctionName : user_esp_platform_init
  * Description  : device parame init based on espressif platform
  * Parameters   : none
@@ -537,6 +748,10 @@ user_esp_platform_maintainer(void *pvParameters)
     while(1){
 //        os_printf("time:%u\r\n",unSNTPTime);
 //        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
+        do{
+            ret = user_esp_platform_check_conection();
+        } while( AP_DISCONNECTED == ret || DNS_FAIL == ret);
+
     	if (1 == tSmartSocketParameter.tConfigure.bReSmartConfig){
     		tSmartSocketParameter.tConfigure.bReSmartConfig = 0;
     		tSmartSocketParameter.tConfigure.bIPGotten = 0; //device_status = DEVICE_CONNECTING;

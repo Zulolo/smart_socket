@@ -294,6 +294,7 @@ else
 
 	@mv eagle.app.flash.bin $(BIN_PATH)/upgrade/$(BIN_NAME).bin
 	@rm eagle.app.v6.*
+	@$(SDK_PATH)/tools/esp_FOTA_bin_crc_gen $(BIN_PATH)/upgrade/$(BIN_NAME).bin
 	@echo "Generate $(BIN_NAME).bin successully in BIN_PATH"
 	@echo "boot.bin------------>0x00000"
 	@echo "$(BIN_NAME).bin--->$(addr)"

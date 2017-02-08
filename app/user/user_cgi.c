@@ -504,7 +504,7 @@ switch_status_set(const char *pValue)
     cJSON * pJson =  cJSON_Parse(pValue);
 
     if(NULL != pJson){
-        pJsonSub = cJSON_GetObjectItem(pJson, "set");
+        pJsonSub = cJSON_GetObjectItem(pJson, "Response");
     }
     
     if(NULL != pJsonSub){
