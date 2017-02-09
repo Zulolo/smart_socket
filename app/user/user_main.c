@@ -163,10 +163,9 @@ int32_t systemInit(void)
 		DAT_nFlashDataClean();
 	}
 
-	tSmartSocketParameter.tConfigure.bIPGotten = 0;
+//	tSmartSocketParameter.tConfigure.bIPGotten = 0;
 	tSmartSocketParameter.tConfigure.bCurrentFailed = 0;
 	tSmartSocketParameter.tConfigure.bJustLongPressed = 0;
-	tSmartSocketParameter.tConfigure.bFWUpgradeStart = 0;
 	tSmartSocketParameter.tConfigure.bFWUpgradeReset = 0;
 	return 0;
 }

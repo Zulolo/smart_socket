@@ -98,11 +98,10 @@ typedef struct SmartSocketParameter{
 		uint32 bReSmartConfig : 1;
 		uint32 bRelayScheduleEnable : 1;
 		uint32 bCurrentFailed : 1;
-		uint32 bIPGotten : 1;
+//		uint32 bIPGotten : 1;
 		uint32 bJustLongPressed : 1;
-		uint32 bFWUpgradeStart : 1;
 		uint32 bFWUpgradeReset : 1;
-		uint32 unused : 22;
+		uint32 unused : 24;
 	}tConfigure;
 	char cSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
 	char cFW_UpgradeServer[MAX_UPDATE_SERVER_ADDR_LEN];

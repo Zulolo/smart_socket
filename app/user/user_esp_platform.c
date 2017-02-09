@@ -65,12 +65,45 @@ LOCAL uint8 ping_status=TRUE;
 struct esp_platform_saved_param esp_param;
 
 LOCAL struct rst_info rtc_info;
-
+LOCAL ip_addr_t esp_server_ip;
 LOCAL uint8 iot_version[20];
+LOCAL uint8 device_status;
 
-LOCAL xTaskHandle *ota_task_handle = NULL;
+//LOCAL xTaskHandle *ota_task_handle = NULL;
 
 extern SmartSocketParameter_t tSmartSocketParameter;
+
+/******************************************************************************
+ * FunctionName : user_esp_platform_get_connect_status
+ * Description  : get each connection step's status
+ * Parameters   : none
+ * Returns      : status
+*******************************************************************************/
+uint8
+user_esp_platform_get_connect_status(void)
+{
+    uint8 status = wifi_station_get_connect_status();
+
+    if (status == STATION_GOT_IP) {
+        status = (device_status == 0) ? DEVICE_CONNECTING : device_status;
+    }
+
+    ESP_DBG("status %d\n", status);
+    return status;
+}
+
+/******************************************************************************
+ * FunctionName : user_esp_platform_set_connect_status
+ * Description  : set each connection step's status
+ * Parameters   : none
+ * Returns      : status
+*******************************************************************************/
+
+void
+user_esp_platform_set_connect_status(uint8 status)
+{
+    device_status = status;
+}
 
 /******************************************************************************
  * FunctionName : user_esp_platform_upgrade_cb
@@ -153,7 +186,8 @@ void wifi_conn_event_cb(System_Event_t *event)
 
     switch (event->event_id) {
         case EVENT_STAMODE_GOT_IP:
-        	tSmartSocketParameter.tConfigure.bIPGotten = 1;
+        	device_status = DEVICE_GOT_IP;
+//        	tSmartSocketParameter.tConfigure.bIPGotten = 1;
             break;
         default:
             break;
@@ -208,7 +242,8 @@ smartconfig_done(sc_status status, void *pdata)
             smartconfig_stop();
             
             user_link_led_output(LED_OFF);
-            tSmartSocketParameter.tConfigure.bIPGotten = 1;
+            device_status = DEVICE_GOT_IP;
+//            tSmartSocketParameter.tConfigure.bIPGotten = 1;
             break;
     }
 
@@ -482,7 +517,7 @@ void startSmartConfig(void)
 	smartconfig_stop();
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
 
-	while(tSmartSocketParameter.tConfigure.bIPGotten != 1){
+	while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
 		ESP_DBG("Smart configuring...\n");
 		vTaskDelay(2000 / portTICK_RATE_MS);
 	}
@@ -495,7 +530,7 @@ void reconnectAP(void)
 	wifi_set_opmode(STATION_MODE);
 	wifi_set_event_handler_cb(wifi_conn_event_cb);
 
-	while(tSmartSocketParameter.tConfigure.bIPGotten != 1){
+	while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
 		ESP_DBG("Connecting...\n");
 		vTaskDelay(2000 / portTICK_RATE_MS);
 	}
@@ -543,40 +578,41 @@ user_esp_platform_data_process(struct client_conn_param *pclient_param, char *pu
             }
         }
 
-        if ((pstr = (char *)strstr(pbuffer, "\"activate_status\": ")) != NULL &&
-                user_esp_platform_parse_nonce(pbuffer) == active_nonce) {
-
-            if (strncmp(pstr + 19, "1", 1) == 0) {
-                printf("device activates successful.\n");
-                device_status = DEVICE_ACTIVE_DONE;
-                esp_param.activeflag = 1;
-                system_param_save_with_protect(ESP_PARAM_START_SEC, &esp_param, sizeof(esp_param));
-                user_esp_platform_sent(pclient_param);
-                if(LIGHT_DEVICE){
-                    //system_restart(); //Jeremy.L why restart?
-                }
-            } else {
-                printf("device activates failed.\n");
-                device_status = DEVICE_ACTIVE_FAIL;
-            }
-        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_upgrade\"")) != NULL) {
-            if ((pstr = (char *)strstr(pbuffer, "\"version\":")) != NULL) {
-
-                struct upgrade_server_info *server = NULL;
-                int nonce = user_esp_platform_parse_nonce(pbuffer);
-                user_platform_rpc_set_rsp(pclient_param, nonce);
-                server = (struct upgrade_server_info *)zalloc(sizeof(struct upgrade_server_info));
-                memcpy(server->upgrade_version, pstr + 12, 16);
-                server->upgrade_version[15] = '\0';
-                sprintf(server->pre_version,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
-                        IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
-                user_esp_platform_upgrade_begin(pclient_param, server);
-            }
-        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_reboot\"")) != NULL) {
-            os_timer_disarm(&client_timer);
-            os_timer_setfn(&client_timer, (os_timer_func_t *)system_upgrade_reboot, NULL);
-            os_timer_arm(&client_timer, 1000, 0);
-        } else if ((pstr = (char *)strstr(pbuffer, "/v1/device/timers/")) != NULL) {
+//        if ((pstr = (char *)strstr(pbuffer, "\"activate_status\": ")) != NULL &&
+//                user_esp_platform_parse_nonce(pbuffer) == active_nonce) {
+//
+//            if (strncmp(pstr + 19, "1", 1) == 0) {
+//                printf("device activates successful.\n");
+//                device_status = DEVICE_ACTIVE_DONE;
+//                esp_param.activeflag = 1;
+//                system_param_save_with_protect(ESP_PARAM_START_SEC, &esp_param, sizeof(esp_param));
+//                user_esp_platform_sent(pclient_param);
+//                if(LIGHT_DEVICE){
+//                    //system_restart(); //Jeremy.L why restart?
+//                }
+//            } else {
+//                printf("device activates failed.\n");
+//                device_status = DEVICE_ACTIVE_FAIL;
+//            }
+//        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_upgrade\"")) != NULL) {
+//            if ((pstr = (char *)strstr(pbuffer, "\"version\":")) != NULL) {
+//
+//                struct upgrade_server_info *server = NULL;
+//                int nonce = user_esp_platform_parse_nonce(pbuffer);
+//                user_platform_rpc_set_rsp(pclient_param, nonce);
+//                server = (struct upgrade_server_info *)zalloc(sizeof(struct upgrade_server_info));
+//                memcpy(server->upgrade_version, pstr + 12, 16);
+//                server->upgrade_version[15] = '\0';
+//                sprintf(server->pre_version,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
+//                        IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
+//                user_esp_platform_upgrade_begin(pclient_param, server);
+//            }
+//        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_reboot\"")) != NULL) {
+//            os_timer_disarm(&client_timer);
+//            os_timer_setfn(&client_timer, (os_timer_func_t *)system_upgrade_reboot, NULL);
+//            os_timer_arm(&client_timer, 1000, 0);
+//        } else
+        if ((pstr = (char *)strstr(pbuffer, "/v1/device/timers/")) != NULL) {
             int nonce = user_esp_platform_parse_nonce(pbuffer);
             user_platform_rpc_set_rsp(pclient_param, nonce);
             //printf("pclient_param sockfd %d\n",pclient_param->sock_fd);
@@ -607,6 +643,38 @@ user_esp_platform_data_process(struct client_conn_param *pclient_param, char *pu
 
         /*data is handled, zero the buffer bef exit*/
         memset(pbuffer, 0, sizeof(pbuffer));
+    }
+
+}
+
+/******************************************************************************
+ * FunctionName : user_esp_platform_ap_change
+ * Description  : add the user interface for changing to next ap ID.
+ * Parameters   :
+ * Returns      : none
+*******************************************************************************/
+LOCAL void
+user_esp_platform_ap_change(void)
+{
+    uint8 current_id;
+    uint8 i = 0;
+
+    current_id = wifi_station_get_current_ap_id();
+    ESP_DBG("current ap id =%d\n", current_id);
+
+    if (current_id == AP_CACHE_NUMBER - 1) {
+       i = 0;
+    } else {
+       i = current_id + 1;
+    }
+    while (wifi_station_ap_change(i) != true) {
+    //try it out until universe collapses
+    ESP_DBG("try ap id =%d\n", i);
+    vTaskDelay(3000 / portTICK_RATE_MS);
+       i++;
+       if (i == AP_CACHE_NUMBER - 1) {
+           i = 0;
+       }
     }
 
 }
@@ -754,7 +822,7 @@ user_esp_platform_maintainer(void *pvParameters)
 
     	if (1 == tSmartSocketParameter.tConfigure.bReSmartConfig){
     		tSmartSocketParameter.tConfigure.bReSmartConfig = 0;
-    		tSmartSocketParameter.tConfigure.bIPGotten = 0; //device_status = DEVICE_CONNECTING;
+    		device_status = 0; //tSmartSocketParameter.tConfigure.bIPGotten = 0; //
             wifi_station_disconnect();
     		startSmartConfig();
     	}
@@ -762,11 +830,6 @@ user_esp_platform_maintainer(void *pvParameters)
     	if ((1 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
     			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
     		user_plug_relay_schedule_action(sntp_get_current_timestamp());
-    	}
-
-    	if ((1 == tSmartSocketParameter.tConfigure.bFWUpgradeStart) &&
-    			(1 == tSmartSocketParameter.tConfigure.bIPGotten)){
-    		tSmartSocketParameter.tConfigure.bFWUpgradeStart = 0;
     	}
 
     	vTaskDelay(1000/portTICK_RATE_MS);

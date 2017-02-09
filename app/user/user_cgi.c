@@ -20,9 +20,7 @@
 
 #include "user_iot_version.h"
 
-#if ESP_PLATFORM
 #include "user_esp_platform.h"
-#endif
 
 #include "user_plug.h"
 
@@ -1282,7 +1280,7 @@ wifi_info_set(const char* pValue)
     cJSON * pJsonSub_Connect_Softap;
     cJSON * pJsonSub_Sub;
 
-//    user_esp_platform_set_connect_status(DEVICE_CONNECTING);
+    user_esp_platform_set_connect_status(DEVICE_CONNECTING);
     
     if (restart_xms != NULL) {
         os_timer_disarm(restart_xms);
@@ -1497,27 +1495,37 @@ scan_result_output(cJSON *pcjson, bool total)
  * Returns      : result
 {"Status":{
 "status":3}}
-
-{"response":{
-"status":10010}}
 *******************************************************************************/
 LOCAL int  
 connect_status_get(cJSON *pcjson, const char* pname )
 {
+    cJSON * pSubJson_Status = cJSON_CreateObject();
+    if(NULL == pSubJson_Status){
+        printf("pSubJson_Status creat fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "Status", pSubJson_Status);
 
-//    cJSON * pSubJson_Status = cJSON_CreateObject();
-//    if(NULL == pSubJson_Status){
-//        printf("pSubJson_Status creat fail\n");
-//        return -1;
-//    }
-//    cJSON_AddItemToObject(pcjson, "Status", pSubJson_Status);
+    cJSON_AddNumberToObject(pSubJson_Status, "status", user_esp_platform_get_connect_status());
+    return 0;
+}
 
-//    cJSON_AddNumberToObject(pSubJson_Status, "status", user_esp_platform_get_connect_status());
+/******************************************************************************
+ * FunctionName : device_get
+ * Description  : set up the device information parmer as a JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{
+"status":10010}}
+*******************************************************************************/
+LOCAL int
+meter_status_get(cJSON *pcjson, const char* pname )
+{
     cJSON * pSubJson_response = cJSON_CreateObject();
 
     if(NULL == pSubJson_response){
         printf("pSubJson_response create fail\n");
-        return -1;
+        return (-1);
     }
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
@@ -1526,7 +1534,6 @@ connect_status_get(cJSON *pcjson, const char* pname )
 
     return 0;
 }
-
 
 typedef int (* cgigetCallback)(cJSON *pcjson, const char* pchar);
 typedef int (* cgisetCallback)(const char* pchar);
@@ -1558,6 +1565,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
     {"config", "wifi", wifi_info_get,wifi_info_set},
 //    {"client", "scan",  scan_info_get, NULL},
     {"client", "status", connect_status_get, NULL},
+	{"client", "meterstatus", meter_status_get, NULL},
     {"config", "reset", NULL,system_status_reset},
     {"client", "info",  system_info_get, NULL},
 	{"upgrade", "getstatus", upgrade_status_get, NULL},
