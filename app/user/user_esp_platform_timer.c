@@ -25,18 +25,30 @@
 
 #define RTC_MEM_TIMER_ADDR 72
 
-LOCAL os_timer_t device_timer;
+LOCAL os_timer_t tSchedulingTimer;
 uint32 unMinWaitSecond;
 
-char *pTimerSplitsString[TIMER_NUMBER]={0};
+char *pTimerSplitsStrings[TIMER_NUMBER] = {0};
 
-LOCAL struct esp_platform_wait_timer_param *pTimerWaitParam;
+LOCAL struct esp_platform_wait_timer_param *pTimerWaitParam = NULL;
 
 LOCAL struct wait_param tWaitAction;
 
 LOCAL struct timer_bkup_param tTimerParam;
 
+extern SmartSocketParameter_t tSmartSocketParameter;
+extern xSemaphoreHandle xSmartSocketParameterSemaphore;;
+
 void esp_platform_timer_action(struct esp_platform_wait_timer_param *timer_wait_param, uint16 count);
+
+bool PLTF_isTimerRunning(void)
+{
+	if (NULL == pTimerWaitParam){
+		return false;
+	}else{
+		return true;
+	}
+}
 
 /******************************************************************************
  * FunctionName : split
@@ -129,11 +141,11 @@ user_platform_timer_first_start(uint16 count)
     pt_w_p = pTimerWaitParam;
     
     //update timestamp base
-    tTimerParam.timestamp = tTimerParam.timestamp + unMinWaitSecond;
-    TM_DEBUG("next timestamp= %d s \n", tTimerParam.timestamp);
+    tTimerParam.unTimestamp = tTimerParam.unTimestamp + unMinWaitSecond;
+    TM_DEBUG("next timestamp= %d s \n", tTimerParam.unTimestamp);
     
     for (i = 0 ; i < count ; i++) {
-        char *str = pTimerSplitsString[i];
+        char *str = pTimerSplitsStrings[i];
         /* l60=on_off_switch
          * w214694=off_switch
          * w41894=off_switch
@@ -156,7 +168,7 @@ user_platform_timer_first_start(uint16 count)
 			else
 				os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, strlen(fixed_wait[1]) );
             
-            pt_w_p->wait_time_second = atoi(pt_w_p->wait_time_param) - tTimerParam.timestamp;
+            pt_w_p->wait_time_second = atoi(pt_w_p->wait_time_param) - tTimerParam.unTimestamp;
             free(fixed_wait[0]);
             free(fixed_wait[1]);
         }else if ('l' == str[0]) {
@@ -176,7 +188,7 @@ user_platform_timer_first_start(uint16 count)
             else
                 os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, strlen(loop_wait[1]) );
 
-            pt_w_p->wait_time_second = atoi(pt_w_p->wait_time_param) - (tTimerParam.timestamp % atoi(pt_w_p->wait_time_param));
+            pt_w_p->wait_time_second = atoi(pt_w_p->wait_time_param) - (tTimerParam.unTimestamp % atoi(pt_w_p->wait_time_param));
             free(loop_wait[0]);
             free(loop_wait[1]);
         } else if ('w' == str[0]) {
@@ -197,7 +209,7 @@ user_platform_timer_first_start(uint16 count)
 			else
 				os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, strlen(week_wait[1]) );
 
-            monday_wait_time = (tTimerParam.timestamp - 1388966400) % (7 * 24 * 3600);	//GMT: Mon, 06 Jan 2014 00:00:00 GMT
+            monday_wait_time = (tTimerParam.unTimestamp - 1388966400) % (7 * 24 * 3600);	//GMT: Mon, 06 Jan 2014 00:00:00 GMT
             
             TM_DEBUG("monday_wait_time=%d \n", monday_wait_time);
             
@@ -276,21 +288,18 @@ user_esp_platform_wait_time_overflow_check(struct wait_param *pwait_action)
     }
 
     if (pwait_action->min_time_backup >= 3600) {
-        os_timer_disarm(&device_timer);
-        os_timer_setfn(&device_timer, (os_timer_func_t *)user_esp_platform_wait_time_overflow_check, pwait_action);
-        os_timer_arm(&device_timer, 3600000, 0);
+        os_timer_disarm(&tSchedulingTimer);
+        os_timer_setfn(&tSchedulingTimer, (os_timer_func_t *)user_esp_platform_wait_time_overflow_check, pwait_action);
+        os_timer_arm(&tSchedulingTimer, 3600000, 0);
         TM_DEBUG("min_wait_second is extended\n");
         bOvflwChkDcrsScnd = true;
     } else {
-        os_timer_disarm(&device_timer);
-        os_timer_setfn(&device_timer, (os_timer_func_t *)user_esp_platform_device_action, pwait_action);
-        os_timer_arm(&device_timer, pwait_action->min_time_backup * 1000, 0);
+        os_timer_disarm(&tSchedulingTimer);
+        os_timer_setfn(&tSchedulingTimer, (os_timer_func_t *)user_esp_platform_device_action, pwait_action);
+        os_timer_arm(&tSchedulingTimer, pwait_action->min_time_backup * 1000, 0);
         TM_DEBUG("min_wait_second is = %dms\n", pwait_action->min_time_backup * 1000);
         bOvflwChkDcrsScnd = false;
     }
-
-    tTimerParam.timer_start_time = system_get_time();
-    
 }
 
 /******************************************************************************
@@ -333,23 +342,17 @@ void
 user_platform_timer_bkup(void)
 {
 
-    u32 time_now = system_get_time();
-
-    /*(min_wait_second - pwait_action->min_time_backup) get the 3600 cycles time*/
-    /*(time_now - timer_param.timer_start_time) get how long the latest timer have passed, uinit is us*/
-    
-    tTimerParam.timer_recoup = (unMinWaitSecond - tWaitAction.min_time_backup) + (time_now - tTimerParam.timer_start_time)/1000000;
-
-    //timestamp plus the time passed, get the new timestamp base
-    printf(">>> timer_param.timestamp %d, timer_param.timer_recoup %d \n",tTimerParam.timestamp,tTimerParam.timer_recoup);
-    tTimerParam.timestamp = tTimerParam.timestamp + tTimerParam.timer_recoup;
-
-    /*set magic code as kind of flag*/
-    tTimerParam.magic =0xa5a5;
-
-    /*write the timer parameter and the timer configuration sting*/
-    system_rtc_mem_write(RTC_MEM_TIMER_ADDR, &tTimerParam, sizeof(tTimerParam));
-    system_rtc_mem_write(RTC_MEM_TIMER_ADDR+sizeof(tTimerParam), tTimerParam.split_buffer, tTimerParam.buffer_size);
+	tSmartSocketParameter.tTimerBkupParam.unTimestamp = sntp_get_current_timestamp();
+	tSmartSocketParameter.tTimerBkupParam.unMagic = 0xa5a5;
+	tSmartSocketParameter.tTimerBkupParam.unBufferSize = tTimerParam.unBufferSize;
+    memcpy(tSmartSocketParameter.sTimerSplitsString, tTimerParam.pSplitBuffer, tTimerParam.unBufferSize);
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+		xSemaphoreGive(xSmartSocketParameterSemaphore);
+	}else{
+		printf("Take parameter semaphore failed.\n");
+	}
 }
 
 /******************************************************************************
@@ -361,29 +364,23 @@ user_platform_timer_bkup(void)
 void  
 user_platform_timer_restore(void)
 {
-    /*load param from RTC memory*/
-    system_rtc_mem_read(RTC_MEM_TIMER_ADDR, &tTimerParam, sizeof(tTimerParam));
-
     /*check the maic number, 0xa5a5 means saved before reboot*/
-    if(tTimerParam.magic == 0xa5a5){
+    if((0xa5a5 ==tSmartSocketParameter.tTimerBkupParam.unMagic) &&
+    		(tSmartSocketParameter.sTimerSplitsString[0] != '\0')){
         printf(">>>user_platform_timer_restore \n");
         /*load timer configuration string from RTC memory*/
-        tTimerParam.split_buffer=malloc(tTimerParam.buffer_size);
-        if(NULL == tTimerParam.split_buffer){
+        tTimerParam.pSplitBuffer = malloc(tTimerParam.unBufferSize);
+        if(NULL == tTimerParam.pSplitBuffer){
             printf(">>>system memory exhausted, check it\n");
             return;
         }
-        system_rtc_mem_read(RTC_MEM_TIMER_ADDR+sizeof(tTimerParam),tTimerParam.split_buffer,tTimerParam.buffer_size);
-
-        /*erase magic code */
-        struct timer_bkup_param stmp;
-        stmp.magic = 0;
-        system_rtc_mem_write(RTC_MEM_TIMER_ADDR, &stmp, sizeof(tTimerParam));
+        memcpy(tTimerParam.pSplitBuffer, tSmartSocketParameter.sTimerSplitsString, tSmartSocketParameter.tTimerBkupParam.unBufferSize);
 
         /*make sure the min_wait_second be zero*/
         unMinWaitSecond = 0;
         
-        uint16 count = split(tTimerParam.split_buffer , ";" , pTimerSplitsString);
+        tTimerParam.unTimestamp = sntp_get_current_timestamp();
+        uint16 count = split(tTimerParam.pSplitBuffer, ";" , pTimerSplitsStrings);
         user_platform_timer_first_start(count);
         
     }else{
@@ -413,57 +410,57 @@ user_platform_timer_start(char *pbuffer)
     
     unMinWaitSecond = 0;
 
-    if (NULL == pbuffer){
-    	tTimerParam.timestamp = sntp_get_current_timestamp();
+	if ((pstr = (char *)strstr(pbuffer, "\"timestamp\":")) != NULL) {
+		pstr_start = pstr + 13;
+		pstr_end = (char *)strstr(pstr_start, ",");
 
-    }else{
-        if ((pstr = (char *)strstr(pbuffer, "\"timestamp\":")) != NULL) {
-            pstr_start = pstr + 13;
-            pstr_end = (char *)strstr(pstr_start, ",");
+		if((pstr_end - pstr_start) <= 11){
+			memcpy(timestamp_str, pstr_start, pstr_end - pstr_start);
+		}else{
+			os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, (pstr_end - pstr_start) );
+			return;
+		}
 
-    		if((pstr_end - pstr_start) <= 11)
-    			memcpy(timestamp_str, pstr_start, pstr_end - pstr_start);
-    		else
-    			os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, (pstr_end - pstr_start) );
+		tTimerParam.unTimestamp = atoi(timestamp_str);
+	}
 
-    		tTimerParam.timestamp = atoi(timestamp_str);
-        }
+	for (i = 0 ; i < TIMER_NUMBER ; i++) {
+		if (pTimerSplitsStrings[i] != NULL) {
+			free(pTimerSplitsStrings[i]);
+			pTimerSplitsStrings[i] = NULL;
+		}
+	}
 
-        for (i = 0 ; i < TIMER_NUMBER ; i++) {
-            if (pTimerSplitsString[i] != NULL) {
-                free(pTimerSplitsString[i]);
-                pTimerSplitsString[i] = NULL;
-            }
-        }
+	if ((pstr_start = (char *)strstr(pbuffer, "\"timers\": \"")) != NULL) {
+		str_begin = 11;
+		str_end = indexof(pstr_start, "\"", str_begin);
 
-        if ((pstr_start = (char *)strstr(pbuffer, "\"timers\": \"")) != NULL) {
-            str_begin = 11;
-            str_end = indexof(pstr_start, "\"", str_begin);
+		if (str_begin == str_end) {
+			os_timer_disarm(&tSchedulingTimer);
+			return;
+		}
 
-            if (str_begin == str_end) {
-                os_timer_disarm(&device_timer);
-                return;
-            }
+		/*""timestamp": 1436324774, "timers": "l60=on_off_switch", "weekday": 3, "now": "2015-07-08 11:06:14"}*/
+		/*""timestamp": 1436325489, "timers": "f1436325630=off_switch;l60=on_off_switch", "weekday": 3, "now": "2015-07-08 11:18:09"}*/
+		/*""timestamp": 1436326580, "timers": "l60=on_off_switch;w214694=off_switch;w41894=off_switch", "weekday": 3, "now": "2015-07-08 11:36:20"}"}*/
 
-            /*""timestamp": 1436324774, "timers": "l60=on_off_switch", "weekday": 3, "now": "2015-07-08 11:06:14"}*/
-            /*""timestamp": 1436325489, "timers": "f1436325630=off_switch;l60=on_off_switch", "weekday": 3, "now": "2015-07-08 11:18:09"}*/
-            /*""timestamp": 1436326580, "timers": "l60=on_off_switch;w214694=off_switch;w41894=off_switch", "weekday": 3, "now": "2015-07-08 11:36:20"}"}*/
+		/*free the old one when a new time configuration cames*/
+		if(tTimerParam.pSplitBuffer != NULL){
+			free(tTimerParam.pSplitBuffer);
+		}
 
-            /*free the old one when a new time configuration cames*/
-            if(tTimerParam.split_buffer != NULL){
-                free(tTimerParam.split_buffer);
-            }
+		/* save the buffer size and string when a new time configuration cames */
+		tTimerParam.unBufferSize = str_end - str_begin + 1;
+		if (tTimerParam.unBufferSize >= TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN){
+			os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, (pstr_end - pstr_start) );
+			return;
+		}
+		tTimerParam.pSplitBuffer = (char *)zalloc(tTimerParam.unBufferSize);
+		memcpy(tTimerParam.pSplitBuffer, pstr_start + str_begin, str_end - str_begin);
 
-            /* save the buffer size and string when a new time configuration cames */
-            tTimerParam.buffer_size = str_end - str_begin + 1;
-            tTimerParam.split_buffer = (char *)zalloc(tTimerParam.buffer_size);
-            memcpy(tTimerParam.split_buffer, pstr_start + str_begin, str_end - str_begin);
-
-            uint16 count = split(tTimerParam.split_buffer, ";", pTimerSplitsString);
-
-            user_platform_timer_first_start(count);
-        }
-    }
-
+		uint16 count = split(tTimerParam.pSplitBuffer, ";", pTimerSplitsStrings);
+		user_platform_timer_bkup();
+		user_platform_timer_first_start(count);
+	}
 }
 

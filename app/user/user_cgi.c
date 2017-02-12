@@ -1043,8 +1043,7 @@ sntp_get(cJSON *pcjson, const char* pname)
  * Description  : set relay schedule
  * Parameters   : pcjson -- A pointer to a JSON formated string
  * Returns      : result
- * {"set":{"schedule":{"index":0,"close_time":3248,"open_time":3456}}}
- * {"set":{"enable":1}}
+ * {"set":{"timers":""timestamp": 1436326580, "timers": "l60=on_off_switch;w214694=off_switch;w41894=off_switch""}}
 *******************************************************************************/
 LOCAL int
 relay_schedule_set(const char* pValue)
@@ -1072,88 +1071,11 @@ relay_schedule_set(const char* pValue)
         return (-1);
     }
 
-    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "schedule")) != NULL){
-        pJsonSubIndex= cJSON_GetObjectItem(pJsonSub, "index");
-        if(NULL == pJsonSubIndex){
-            printf("cJSON_GetObjectItem schedule fail.\n");
-            cJSON_Delete(pJson);
-            return (-1);
-        }else{
-        	if ((pJsonSubIndex->valueint < 0) || (pJsonSubIndex->valueint >= RELAY_SCHEDULE_NUM)){
-                printf("Schedule index error.\n");
-                cJSON_Delete(pJson);
-                return (-1);
-        	}else{
-        		unIndex = pJsonSubIndex->valueint;
-        	}
-        }
-
-        pJsonSubCloseTime = cJSON_GetObjectItem(pJsonSub,"close_time");
-        if(NULL == pJsonSubCloseTime){
-			printf("cJSON_GetObjectItem pJsonSubCloseTime fail\n");
-			cJSON_Delete(pJson);
-			return (-1);
-		}else{
-        	if ((pJsonSubCloseTime->valueint < 0) || (pJsonSubCloseTime->valueint >= RELAY_SCHEDULE_MAX_SEC_DAY)){
-                printf("Schedule close time error.\n");
-                cJSON_Delete(pJson);
-                return (-1);
-        	}else{
-        		unCloseTime = pJsonSubCloseTime->valueint;
-        	}
-        }
-
-        pJsonSubOpenTime = cJSON_GetObjectItem(pJsonSub,"open_time");
-        if(NULL == pJsonSubOpenTime){
-			printf("cJSON_GetObjectItem pJsonSubOpenTime fail\n");
-			cJSON_Delete(pJson);
-			return (-1);
-		}else{
-        	if ((pJsonSubOpenTime->valueint < 0) || (pJsonSubOpenTime->valueint >= RELAY_SCHEDULE_MAX_SEC_DAY) ||
-        			(pJsonSubOpenTime->valueint <= (unCloseTime + RELAY_SCHEDULE_MIN_CLOSE_TIME))){
-                printf("Schedule open time error.\n");
-                cJSON_Delete(pJson);
-                return (-1);
-        	}else{
-        		unOpenTime = pJsonSubOpenTime->valueint;
-        	}
-        }
-        if (user_plug_relay_schedule_validation(unIndex, unCloseTime, unOpenTime) == true){
-        	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayCloseTime = unCloseTime;
-        	tSmartSocketParameter.tRelaySchedule[unIndex].unRelayOpenTime = unOpenTime;
-        }
-
-    	cJSON_Delete(pJson);
-    	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
-    		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
-    							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
-    		xSemaphoreGive(xSmartSocketParameterSemaphore);
-    		return 0;
-    	}else{
-    		printf("Take parameter semaphore failed.\n");
-    		return (-1);
-    	}
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "timers")) != NULL){
+    	user_platform_timer_start(pJsonSub->valuestring);
+    	return 0;
     }
 
-    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "enable")) != NULL){
-		if ((pJsonSub->valueint != 0) && (pJsonSub->valueint != 1)){
-            printf("Schedule enable value error\n");
-            cJSON_Delete(pJson);
-            return (-1);
-    	}else{
-        	tSmartSocketParameter.tConfigure.bRelayScheduleEnable = pJsonSub->valueint;
-        	cJSON_Delete(pJson);
-        	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
-        		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
-        							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
-        		xSemaphoreGive(xSmartSocketParameterSemaphore);
-        		return 0;
-        	}else{
-        		printf("Take parameter semaphore failed.\n");
-        		return (-1);
-        	}
-    	}
-    }
     printf("Unrecognized relay schedule.\n");
     cJSON_Delete(pJson);
 	return (-1);

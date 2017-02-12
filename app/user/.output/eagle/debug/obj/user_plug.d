@@ -94,4 +94,5 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
- ../include/user_data.h ../include/smart_socket_global.h
+ ../include/user_data.h ../include/smart_socket_global.h \
+ ../include/user_esp_platform.h

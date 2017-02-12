@@ -52,7 +52,7 @@ struct esp_platform_saved_param esp_param;
 LOCAL struct rst_info rtc_info;
 LOCAL uint8 iot_version[20];
 LOCAL uint8 device_status;
-
+LOCAL os_timer_t tCheckSNTPTimer;
 //LOCAL xTaskHandle *ota_task_handle = NULL;
 
 extern SmartSocketParameter_t tSmartSocketParameter;
@@ -352,15 +352,9 @@ exception (%d): \n",rtc_info.reason,rtc_info.epc1,rtc_info.epc2,rtc_info.epc3,rt
     system_rtc_mem_write(70,&boot_flag,sizeof(boot_flag));
 
     /*restore system timer after reboot, note here not for power off */
-    user_platform_timer_restore();
+    // Move this restore to SNTP OK
+ //   user_platform_timer_restore();
 }
-
-/******************************************************************************
- * FunctionName : user_esp_platform_param_recover
- * Description  : espconn struct parame init when get ip addr
- * Parameters   : none
- * Returns      : none
-*******************************************************************************/
 
 //LOCAL void
 //user_platform_stationap_enable(void)
@@ -384,6 +378,22 @@ void reconnectAP(void)
 //	printf("entry station mode to connect server \n");
 	wifi_set_opmode(STATION_MODE);
 	wifi_set_event_handler_cb(wifi_conn_event_cb);
+}
+
+void
+user_check_sntp_stamp(void)
+{
+	uint32 current_stamp;
+	current_stamp = sntp_get_current_timestamp();
+	if(current_stamp == 0){
+		os_timer_arm(&tCheckSNTPTimer, 1000, 0);
+	}else{
+		os_timer_disarm(&tCheckSNTPTimer);
+		os_printf("sntp: %d, %s \n",current_stamp, sntp_get_real_time(current_stamp));
+		if (false == PLTF_isTimerRunning()){
+			user_platform_timer_restore();
+		}
+	}
 }
 
 /******************************************************************************
@@ -432,16 +442,21 @@ user_esp_platform_maintainer(void *pvParameters)
 	sntp_set_timezone(0);
 	sntp_init();
 
+    os_timer_disarm(&tCheckSNTPTimer);
+    os_timer_setfn(&tCheckSNTPTimer, (os_timer_func_t *)user_check_sntp_stamp, NULL);
+    os_timer_arm(&tCheckSNTPTimer, 1000, 0);
+
     while(1){
     	// Internet functions will be located here to connect to server and listening
     	// if there is any command like relay status change, upgrade or timer update
     	// even if you are not in local network with smart plug
-    	if ((1 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
-    			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
-    		user_plug_relay_schedule_action(sntp_get_current_timestamp());
-    	}
 
-    	vTaskDelay(1000/portTICK_RATE_MS);
+//    	if ((1 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
+//    			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
+//    		user_plug_relay_schedule_action(sntp_get_current_timestamp());
+//    	}
+
+    	vTaskDelay(5000/portTICK_RATE_MS);
     }
     printf("user_esp_platform_maintainer task end.\n");
     vTaskDelete(NULL);
@@ -470,4 +485,3 @@ void user_esp_platform_init(void)
 //    }
 //}
 
-#endif

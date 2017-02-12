@@ -95,6 +95,16 @@ typedef struct RelaySchedule{
 	uint32 unRelayOpenTime;
 }RelaySchedule_t;
 
+typedef struct timer_bkup_param{
+//	uint32 timer_recoup;
+//	uint32 timer_start_time;
+	uint32 unBufferSize;
+	uint32 unTimestamp;
+    uint16 unMagic;
+    char *pSplitBuffer;
+//    char pad;
+}TimerBkup_para_t;
+
 typedef struct SmartSocketParameter{
 	struct
 	{
@@ -104,7 +114,7 @@ typedef struct SmartSocketParameter{
 //		uint32 bReSmartConfig : 1;
 		uint32 bRelayScheduleEnable : 1;
 		uint32 bCurrentFailed : 1;
-//		uint32 bIPGotten : 1;
+//		uint32 bSchdTimer : 1;
 		uint32 bJustLongPressed : 1;
 		uint32 bFWUpgradeReset : 1;
 		uint32 unused : 25;
@@ -119,7 +129,8 @@ typedef struct SmartSocketParameter{
 	float fCurrentThreshold;
 	uint32 unTrendRecordNum;
 	uint32 unValidation;	//TODO: use CRC of tEvent array data
-	char sTimerSplitsString[TIMER_SAVE_FLASH_NUMBER][EACH_TIMER_SAVE_FLASH_MAX_LEN];
+	TimerBkup_para_t tTimerBkupParam;
+	char sTimerSplitsString[TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN];
 }SmartSocketParameter_t;
 
 typedef struct TrendContent{
