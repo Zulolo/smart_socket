@@ -243,6 +243,13 @@ void
 smartconfig_task(void *pvParameters)
 {
     printf("smartconfig_task start\n");
+    printf("wifi_set_opmode \n");
+	wifi_set_opmode(STATION_MODE);
+	printf("wifi_station_disconnect \n");
+    wifi_station_disconnect();
+	printf("smartconfig_stop \n");
+	smartconfig_stop();
+	printf("smartconfig_start \n");
     smartconfig_start(smartconfig_done);
 
     vTaskDelete(NULL);
@@ -367,12 +374,6 @@ void PLTFM_startSmartConfig(void)
 //	printf("No previous AP record found, enter smart config. \n");
 	printf("device_status = 0 \n");
 	device_status = 0; //tSmartSocketParameter.tConfigure.bIPGotten = 0; //
-    printf("wifi_set_opmode \n");
-	wifi_set_opmode(STATION_MODE);
-	printf("wifi_station_disconnect \n");
-    wifi_station_disconnect();
-	printf("smartconfig_stop \n");
-	smartconfig_stop();
 	printf("xTaskCreate \n");
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
 }

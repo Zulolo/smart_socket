@@ -32,7 +32,7 @@ int32_t DAT_nFlashDataClean(void)
 		tSmartSocketParameter.unValidation = 0xA5A5A5A5;
 		tSmartSocketParameter.tConfigure.bButtonRelayEnable = 1;
 		tSmartSocketParameter.tConfigure.bSNTPEnable = 1;
-		tSmartSocketParameter.tConfigure.bRelayScheduleEnable = 0;
+//		tSmartSocketParameter.tConfigure.bRelayScheduleEnable = 0;
 		tSmartSocketParameter.unFW_UpgradePort = 80;
 		tSmartSocketParameter.fCurrentThreshold = 10;
 		memcpy(tSmartSocketParameter.sSNTP_Server[0], "cn.pool.ntp.org", sizeof("cn.pool.ntp.org"));
