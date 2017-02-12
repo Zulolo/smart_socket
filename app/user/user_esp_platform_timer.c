@@ -39,7 +39,7 @@ LOCAL struct timer_bkup_param tTimerParam;
 extern SmartSocketParameter_t tSmartSocketParameter;
 extern xSemaphoreHandle xSmartSocketParameterSemaphore;;
 
-void esp_platform_timer_action(struct esp_platform_wait_timer_param *timer_wait_param, uint16 count);
+void esp_platform_timer_schedule(struct esp_platform_wait_timer_param *timer_wait_param, uint16 count);
 
 bool PLTF_isTimerRunning(void)
 {
@@ -114,12 +114,16 @@ void
 esp_platform_find_min_time(struct esp_platform_wait_timer_param *timer_wait_param , uint16 count)
 {
     uint16 i = 0;
-    unMinWaitSecond = 0xFFFFFFF;
+    unMinWaitSecond = 0xFFFFFFFF;
 
     for (i = 0; i < count ; i++) {
-        if (timer_wait_param[i].wait_time_second < unMinWaitSecond && timer_wait_param[i].wait_time_second >= 0) {
+        if (timer_wait_param[i].wait_time_second < unMinWaitSecond && timer_wait_param[i].wait_time_second > 0) {
             unMinWaitSecond = timer_wait_param[i].wait_time_second;
         }
+    }
+
+    if (0xFFFFFFFF == unMinWaitSecond){
+    	unMinWaitSecond = 0;
     }
 }
 
@@ -232,7 +236,7 @@ user_platform_timer_first_start(uint16 count)
         return;
     }
 
-    esp_platform_timer_action(pTimerWaitParam, count);
+    esp_platform_timer_schedule(pTimerWaitParam, count);
 }
 
 /******************************************************************************
@@ -270,7 +274,7 @@ user_esp_platform_device_action(struct wait_param *pwait_action)
 }
 
 /******************************************************************************
- * FunctionName : user_platform_timer_start
+ * FunctionName : user_esp_platform_wait_time_overflow_check
  * Description  : Processing the message about timer from the server
  * Parameters   : timer_wait_param -- The received data from the server
  *                count -- the espconn used to connetion with the host
@@ -283,7 +287,7 @@ user_esp_platform_wait_time_overflow_check(struct wait_param *pwait_action)
     TM_DEBUG("min_wait_second = %d", pwait_action->min_time_backup);
     static bool bOvflwChkDcrsScnd = false;
 
-    if(bOvflwChkDcrsScnd != 0 ){
+    if(bOvflwChkDcrsScnd != false){
         pwait_action->min_time_backup -= 3600;
     }
 
@@ -303,14 +307,14 @@ user_esp_platform_wait_time_overflow_check(struct wait_param *pwait_action)
 }
 
 /******************************************************************************
- * FunctionName : user_platform_timer_start
+ * FunctionName : esp_platform_timer_schedule
  * Description  : Processing the message about timer from the server
  * Parameters   : timer_wait_param -- The received data from the server
  *                count -- the espconn used to connetion with the host
  * Returns      : none
 *******************************************************************************/
 void  
-esp_platform_timer_action(struct esp_platform_wait_timer_param *timer_wait_param, uint16 count)
+esp_platform_timer_schedule(struct esp_platform_wait_timer_param *timer_wait_param, uint16 count)
 {
     uint16 i = 0;
     uint16 action_number;
@@ -318,7 +322,7 @@ esp_platform_timer_action(struct esp_platform_wait_timer_param *timer_wait_param
     tWaitAction.count = count;
     action_number = 0;
 
-    for (i = 0; i < count ; i++) {
+    for (i = 0; i < count; i++) {
         if (timer_wait_param[i].wait_time_second == unMinWaitSecond) {
             memcpy(tWaitAction.action[action_number], timer_wait_param[i].wait_action, strlen(timer_wait_param[i].wait_action));
             TM_DEBUG("*****%s*****\n", timer_wait_param[i].wait_action);
@@ -365,11 +369,13 @@ void
 user_platform_timer_restore(void)
 {
     /*check the maic number, 0xa5a5 means saved before reboot*/
-    if((0xa5a5 ==tSmartSocketParameter.tTimerBkupParam.unMagic) &&
-    		(tSmartSocketParameter.sTimerSplitsString[0] != '\0')){
+    if((0xa5a5 == tSmartSocketParameter.tTimerBkupParam.unMagic) &&
+    		(tSmartSocketParameter.sTimerSplitsString[0] != '\0') &&
+			(tSmartSocketParameter.tTimerBkupParam.unBufferSize != 0)){
         printf(">>>user_platform_timer_restore \n");
-        /*load timer configuration string from RTC memory*/
-        tTimerParam.pSplitBuffer = malloc(tTimerParam.unBufferSize);
+        printf(">>>copy timer configuration %u back \n", tSmartSocketParameter.tTimerBkupParam.unBufferSize);
+        tTimerParam.unBufferSize = tSmartSocketParameter.tTimerBkupParam.unBufferSize;
+        tTimerParam.pSplitBuffer = malloc(tSmartSocketParameter.tTimerBkupParam.unBufferSize);
         if(NULL == tTimerParam.pSplitBuffer){
             printf(">>>system memory exhausted, check it\n");
             return;
@@ -388,6 +394,23 @@ user_platform_timer_restore(void)
         memset(&tTimerParam, 0, sizeof(tTimerParam));
     }
 
+}
+
+void
+user_platform_timer_reset(void)
+{
+	os_timer_disarm(&tSchedulingTimer);
+	tSmartSocketParameter.tTimerBkupParam.unTimestamp = 0;
+	tSmartSocketParameter.tTimerBkupParam.unMagic = 0;
+	tSmartSocketParameter.tTimerBkupParam.unBufferSize = 0;
+    memset(tSmartSocketParameter.sTimerSplitsString, 0, TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN);
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+		xSemaphoreGive(xSmartSocketParameterSemaphore);
+	}else{
+		printf("Take parameter semaphore failed.\n");
+	}
 }
 
 /******************************************************************************

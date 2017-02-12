@@ -991,6 +991,7 @@ sntp_set(const char* pValue)
         		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
         							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
         		xSemaphoreGive(xSmartSocketParameterSemaphore);
+        		PLTF_startSBTP();
         		return 0;
         	}else{
         		printf("Take parameter semaphore failed.\n");
@@ -1071,8 +1072,15 @@ relay_schedule_set(const char* pValue)
         return (-1);
     }
 
+    if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "reset")) != NULL){
+    	user_platform_timer_reset();
+    	cJSON_Delete(pJson);
+    	return 0;
+    }
+
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "timers")) != NULL){
     	user_platform_timer_start(pJsonSub->valuestring);
+    	cJSON_Delete(pJson);
     	return 0;
     }
 
@@ -1086,20 +1094,14 @@ relay_schedule_set(const char* pValue)
  * Description  : get relay schedule
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
-{
-"Response":{"enable":1,
-			"schedule":{"close_time":3243,"open_time":3248},
-			"schedule":{"close_time":4243,"open_time":4248},
-			"schedule":{"close_time":5243,"open_time":5248},
-			"schedule":{"close_time":6243,"open_time":6248}}
-}
+{"Response":{"timers":""timestamp": 1436326580, "timers": "l60=on_off_switch;w214694=off_switch;w41894=off_switch""}}
 *******************************************************************************/
 LOCAL int
 relay_schedule_get(cJSON *pcjson, const char* pname)
 {
-	uint8_t unIndex;
     cJSON * pSubJsonResponse;
 	cJSON * pSubJsonschedule;
+	char sTimerSplitsString[TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN + 32];
 
     pSubJsonResponse = cJSON_CreateObject();
     if(NULL == pSubJsonResponse){
@@ -1107,18 +1109,9 @@ relay_schedule_get(cJSON *pcjson, const char* pname)
         return (-1);
     }
     cJSON_AddItemToObject(pcjson, "Response", pSubJsonResponse);
-    cJSON_AddNumberToObject(pSubJsonResponse, "enable", tSmartSocketParameter.tConfigure.bRelayScheduleEnable);
-
-    for (unIndex = 0; unIndex < RELAY_SCHEDULE_NUM; unIndex++){
-        pSubJsonschedule= cJSON_CreateObject();
-        if(NULL == pSubJsonschedule){
-            printf("pSubJsonEnable create fail\n");
-            return (-1);
-        }
-        cJSON_AddItemToObject(pSubJsonResponse, "schedule", pSubJsonschedule);
-        cJSON_AddNumberToObject(pSubJsonschedule, "close_time", tSmartSocketParameter.tRelaySchedule[unIndex].unRelayCloseTime);
-        cJSON_AddNumberToObject(pSubJsonschedule, "open_time", tSmartSocketParameter.tRelaySchedule[unIndex].unRelayOpenTime);
-    }
+    snprintf(sTimerSplitsString, sizeof(sTimerSplitsString), "\"timestamp\": %u, \"timers\": \"%s\"",
+    		sntp_get_current_timestamp(), tSmartSocketParameter.sTimerSplitsString);
+    cJSON_AddStringToObject(pSubJsonResponse, "timers", sTimerSplitsString);
 
 	return 0;
 }

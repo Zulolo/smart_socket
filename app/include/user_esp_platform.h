@@ -59,4 +59,6 @@ int user_esp_platform_upgrade_begin(void);
 uint8  user_esp_platform_get_connect_status(void);
 void user_esp_platform_set_connect_status(uint8 status);
 void PLTFM_startSmartConfig(void);
+void PLTF_startSBTP(void);
+
 #endif

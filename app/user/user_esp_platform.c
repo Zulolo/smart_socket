@@ -365,10 +365,15 @@ exception (%d): \n",rtc_info.reason,rtc_info.epc1,rtc_info.epc2,rtc_info.epc3,rt
 void PLTFM_startSmartConfig(void)
 {
 //	printf("No previous AP record found, enter smart config. \n");
+	printf("device_status = 0 \n");
 	device_status = 0; //tSmartSocketParameter.tConfigure.bIPGotten = 0; //
-    wifi_station_disconnect();
+    printf("wifi_set_opmode \n");
 	wifi_set_opmode(STATION_MODE);
+	printf("wifi_station_disconnect \n");
+    wifi_station_disconnect();
+	printf("smartconfig_stop \n");
 	smartconfig_stop();
+	printf("xTaskCreate \n");
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
 }
 
@@ -386,7 +391,7 @@ user_check_sntp_stamp(void)
 	uint32 current_stamp;
 	current_stamp = sntp_get_current_timestamp();
 	if(current_stamp == 0){
-		os_timer_arm(&tCheckSNTPTimer, 1000, 0);
+		os_timer_arm(&tCheckSNTPTimer, 2000, 0);
 	}else{
 		os_timer_disarm(&tCheckSNTPTimer);
 		os_printf("sntp: %d, %s \n",current_stamp, sntp_get_real_time(current_stamp));
@@ -396,6 +401,19 @@ user_check_sntp_stamp(void)
 	}
 }
 
+void PLTF_startSBTP(void)
+{
+	sntp_stop();
+	sntp_setservername(0, tSmartSocketParameter.sSNTP_Server[0]);
+	sntp_setservername(1, tSmartSocketParameter.sSNTP_Server[1]);
+	sntp_setservername(2, tSmartSocketParameter.sSNTP_Server[2]);
+	sntp_set_timezone(0);
+	sntp_init();
+
+    os_timer_disarm(&tCheckSNTPTimer);
+    os_timer_setfn(&tCheckSNTPTimer, (os_timer_func_t *)user_check_sntp_stamp, NULL);
+    os_timer_arm(&tCheckSNTPTimer, 2000, 0);
+}
 /******************************************************************************
  * FunctionName : user_esp_platform_init
  * Description  : device parame init based on espressif platform
@@ -436,15 +454,7 @@ user_esp_platform_maintainer(void *pvParameters)
 		}
 	}
 
-	sntp_setservername(0, tSmartSocketParameter.sSNTP_Server[0]);
-	sntp_setservername(1, tSmartSocketParameter.sSNTP_Server[1]);
-	sntp_setservername(2, tSmartSocketParameter.sSNTP_Server[2]);
-	sntp_set_timezone(0);
-	sntp_init();
-
-    os_timer_disarm(&tCheckSNTPTimer);
-    os_timer_setfn(&tCheckSNTPTimer, (os_timer_func_t *)user_check_sntp_stamp, NULL);
-    os_timer_arm(&tCheckSNTPTimer, 1000, 0);
+	PLTF_startSBTP();
 
     while(1){
     	// Internet functions will be located here to connect to server and listening
