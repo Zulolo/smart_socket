@@ -35,9 +35,9 @@ int32_t DAT_nFlashDataClean(void)
 		tSmartSocketParameter.tConfigure.bRelayScheduleEnable = 0;
 		tSmartSocketParameter.unFW_UpgradePort = 80;
 		tSmartSocketParameter.fCurrentThreshold = 10;
-		memcpy(tSmartSocketParameter.cSNTP_Server[0], "cn.pool.ntp.org", sizeof("cn.pool.ntp.org"));
-		memcpy(tSmartSocketParameter.cSNTP_Server[1], "asia.pool.ntp.org", sizeof("asia.pool.ntp.org"));
-		memcpy(tSmartSocketParameter.cSNTP_Server[2], "pool.ntp.org", sizeof("pool.ntp.org"));
+		memcpy(tSmartSocketParameter.sSNTP_Server[0], "cn.pool.ntp.org", sizeof("cn.pool.ntp.org"));
+		memcpy(tSmartSocketParameter.sSNTP_Server[1], "asia.pool.ntp.org", sizeof("asia.pool.ntp.org"));
+		memcpy(tSmartSocketParameter.sSNTP_Server[2], "pool.ntp.org", sizeof("pool.ntp.org"));
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
 		xSemaphoreGive(xSmartSocketParameterSemaphore);

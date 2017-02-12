@@ -37,13 +37,7 @@
 
 #include "user_plug.h"
 
-#define RESPONSE_FRAME  "{\"status\": 200, \"datapoint\": {\"x\": %d}, \"nonce\": %d, \"deliver_to_device\": true}\n"
-#define FIRST_FRAME     "{\"nonce\": %d, \"path\": \"/v1/device/identify\", \"method\": \"GET\",\"meta\": {\"Authorization\": \"token %s\"}}\n"
-
-#define BEACON_FRAME    "{\"path\": \"/v1/ping/\", \"method\": \"POST\",\"meta\": {\"Authorization\": \"token %s\"}}\n"
-#define RPC_RESPONSE_FRAME  "{\"status\": 200, \"nonce\": %d, \"deliver_to_device\": true}\n"
-#define TIMER_FRAME     "{\"body\": {}, \"get\":{\"is_humanize_format_simple\":\"true\"},\"meta\": {\"Authorization\": \"Token %s\"},\"path\": \"/v1/device/timers/\",\"post\":{},\"method\": \"GET\"}\n"
-#define pheadbuffer "Connection: close\r\n\
+#define DOWNLOAD_FW_UPGRADE_HEADER "Connection: close\r\n\
 Cache-Control: no-cache\r\n\
 User-Agent: Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36 \r\n\
 Accept: */*\r\n\
@@ -51,21 +45,11 @@ Authorization: token %s\r\n\
 Accept-Encoding: gzip,deflate,sdch\r\n\
 Accept-Language: zh-CN,zh;q=0.8\r\n\r\n"
 
-//LOCAL uint8 ping_status=TRUE;
-
-#define ACTIVE_FRAME    "{\"nonce\": %d,\"path\": \"/v1/device/activate/\", \"method\": \"POST\", \"body\": {\"encrypt_method\": \"PLAIN\", \"token\": \"%s\", \"bssid\": \""MACSTR"\",\"rom_version\":\"%s\"}, \"meta\": {\"Authorization\": \"token %s\"}}\n"
-#define UPGRADE_FRAME  "{\"path\": \"/v1/messages/\", \"method\": \"POST\", \"meta\": {\"Authorization\": \"token %s\"},\
-\"get\":{\"action\":\"%s\"},\"body\":{\"pre_rom_version\":\"%s\",\"rom_version\":\"%s\"}}\n"
-
 #define REBOOT_MAGIC  (12345)
 
 LOCAL int  user_boot_flag;
-LOCAL uint8 ping_status=TRUE;
-
 struct esp_platform_saved_param esp_param;
-
 LOCAL struct rst_info rtc_info;
-LOCAL ip_addr_t esp_server_ip;
 LOCAL uint8 iot_version[20];
 LOCAL uint8 device_status;
 
@@ -149,7 +133,7 @@ int user_esp_platform_upgrade_begin(void)
 
     pUpgradeServer->sockaddrin.sin_family = AF_INET;
     // I am quite clear what I am doing, compiler doesn't know
-    pUpgradeServer->sockaddrin.sin_addr.s_addr = inet_addr(tSmartSocketParameter.cFW_UpgradeServer);
+    pUpgradeServer->sockaddrin.sin_addr.s_addr = inet_addr(tSmartSocketParameter.sFW_UpgradeServer);
     pUpgradeServer->sockaddrin.sin_port = htons(tSmartSocketParameter.unFW_UpgradePort);
 
     pUpgradeServer->check_cb = user_esp_platform_upgrade_rsp;
@@ -165,9 +149,9 @@ int user_esp_platform_upgrade_begin(void)
 //        memcpy(cUserBin, "user1.bin", 10);
 //    }
 
-    sprintf(pUpgradeServer->url, "GET %s%u HTTP/1.0\r\nHost: %s:%d\r\n"pheadbuffer"",
-			tSmartSocketParameter.cFW_UpgradeUrl, ((system_upgrade_userbin_check() == USER_BIN1) ? USER_BIN2 : USER_BIN1) + 1,
-					tSmartSocketParameter.cFW_UpgradeHost,ntohs(pUpgradeServer->sockaddrin.sin_port), tSmartSocketParameter.cFW_UpgradeToken);//  IPSTR  IP2STR(server->sockaddrin.sin_addr.s_addr)
+    sprintf(pUpgradeServer->url, "GET %s%u HTTP/1.0\r\nHost: %s:%d\r\n"DOWNLOAD_FW_UPGRADE_HEADER"",
+			tSmartSocketParameter.sFW_UpgradeUrl, ((system_upgrade_userbin_check() == USER_BIN1) ? USER_BIN2 : USER_BIN1) + 1,
+					tSmartSocketParameter.sFW_UpgradeHost,ntohs(pUpgradeServer->sockaddrin.sin_port), tSmartSocketParameter.sFW_UpgradeToken);//  IPSTR  IP2STR(server->sockaddrin.sin_addr.s_addr)
     ESP_DBG("%s\n",pUpgradeServer->url);
 
     if (system_upgrade_start(pUpgradeServer) == true) {
@@ -320,132 +304,6 @@ user_esp_platform_set_active(uint8 activeflag)
 }
 
 /******************************************************************************
- * FunctionName : user_esp_platform_parse_nonce
- * Description  : parse the device nonce
- * Parameters   : pbuffer -- the recivce data point
- * Returns      : the nonce
-*******************************************************************************/
-int  
-user_esp_platform_parse_nonce(char *pbuffer)
-{
-    char *pstr = NULL;
-    char *pparse = NULL;
-    char noncestr[11] = {0};
-    int nonce = 0;
-    pstr = (char *)strstr(pbuffer, "\"nonce\": ");
-
-    if (pstr != NULL) {
-        pstr += 9;
-        pparse = (char *)strstr(pstr, ",");
-
-        if (pparse != NULL) {
-
-            if( (pparse - pstr)<=11)
-                memcpy(noncestr, pstr, pparse - pstr);
-            else
-                os_printf("ERR:arr_overflow,%u,%d\n",__LINE__,(pparse - pstr));
-            
-        } else {
-            pparse = (char *)strstr(pstr, "}");
-
-            if (pparse != NULL) {
-                if( (pparse - pstr)<=11)
-                    memcpy(noncestr, pstr, pparse - pstr);
-                else
-                    os_printf("ERR:arr_overflow,%u,%d\n",__LINE__,(pparse - pstr));
-            } else {
-                pparse = (char *)strstr(pstr, "]");
-
-                if (pparse != NULL) {
-                    if( (pparse - pstr)<=11)
-                        memcpy(noncestr, pstr, pparse - pstr);
-                    else
-                        os_printf("ERR:arr_overflow,%u,%d\n",__LINE__,(pparse - pstr));
-                } else {
-                    return 0;
-                }
-            }
-        }
-
-        nonce = atoi(noncestr);
-    }
-
-    return nonce;
-}
-
-/******************************************************************************
- * FunctionName : user_esp_platform_get_info
- * Description  : get and update the espressif's device status
- * Parameters   : pespconn -- the espconn used to connect with host
- *                pbuffer -- prossing the data point
- * Returns      : none
-*******************************************************************************/
-void  
-user_esp_platform_get_info( struct client_conn_param *pclient_param, uint8 *pbuffer)
-{
-    char *pbuf = NULL;
-    int nonce = 0;
-
-    pbuf = (char *)zalloc(packet_size);
-
-    nonce = user_esp_platform_parse_nonce(pbuffer);
-
-    if (pbuf != NULL) {
-        sprintf(pbuf, RESPONSE_FRAME, user_plug_get_status(), nonce);
-
-        ESP_DBG("%s\n", pbuf);
-        write(pclient_param->sock_fd, pbuf, strlen(pbuf));
-        free(pbuf);
-        pbuf = NULL;
-    }
-}
-
-/******************************************************************************
- * FunctionName : user_esp_platform_set_info
- * Description  : prossing the data and controling the espressif's device
- * Parameters   : sockfd -- the socket handle used to connect with host
- *                pbuffer -- prossing the data point
- * Returns      : none
-*******************************************************************************/
-void  
-user_esp_platform_set_info( struct client_conn_param *pclient_param, uint8 *pbuffer)
-{
-
-#if PLUG_DEVICE
-    char *pstr = NULL;
-    pstr = (char *)strstr(pbuffer, "plug-status");
-
-    if (pstr != NULL) {
-        pstr = (char *)strstr(pbuffer, "body");
-
-        if (pstr != NULL) {
-
-            if (strncmp(pstr + 27, "1", 1) == 0) {
-                user_plug_set_status(0x01);
-            } else if (strncmp(pstr + 27, "0", 1) == 0) {
-                user_plug_set_status(0x00);
-            }
-        }
-    }
-    user_esp_platform_get_info(pclient_param, pbuffer);
-}
-
-/******************************************************************************
- * FunctionName : user_mdns_conf
- * Description  : mdns init
- * Parameters   : none
- * Returns      : none
-*******************************************************************************/
-struct mdns_info {
-	char *host_name;
-	char *server_name;
-	uint16 server_port;
-	unsigned long ipAddr;
-	char *txt_data[10];
-};
-
-
-/******************************************************************************
  * FunctionName : user_esp_platform_param_recover
  * Description  : espconn struct parame init when get ip addr
  * Parameters   : none
@@ -510,17 +368,14 @@ exception (%d): \n",rtc_info.reason,rtc_info.epc1,rtc_info.epc2,rtc_info.epc3,rt
 //    wifi_set_opmode(STATIONAP_MODE);
 //}
 
-void startSmartConfig(void)
+void PLTFM_startSmartConfig(void)
 {
 //	printf("No previous AP record found, enter smart config. \n");
+	device_status = 0; //tSmartSocketParameter.tConfigure.bIPGotten = 0; //
+    wifi_station_disconnect();
 	wifi_set_opmode(STATION_MODE);
 	smartconfig_stop();
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
-
-	while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
-		ESP_DBG("Smart configuring...\n");
-		vTaskDelay(2000 / portTICK_RATE_MS);
-	}
 }
 
 void reconnectAP(void)
@@ -529,255 +384,7 @@ void reconnectAP(void)
 //	printf("entry station mode to connect server \n");
 	wifi_set_opmode(STATION_MODE);
 	wifi_set_event_handler_cb(wifi_conn_event_cb);
-
-	while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
-		ESP_DBG("Connecting...\n");
-		vTaskDelay(2000 / portTICK_RATE_MS);
-	}
 }
-
-/******************************************************************************
- * FunctionName : user_esp_platform_data_process
- * Description  : Processing the received data from the server
- * Parameters   : arg -- Additional argument to pass to the callback function
- *                pusrdata -- The received data (or NULL when the connection has been closed!)
- *                length -- The length of received data
- * Returns      : none
-*******************************************************************************/
-LOCAL void
-user_esp_platform_data_process(struct client_conn_param *pclient_param, char *pusrdata, unsigned short length)
-{
-    char *pstr = NULL;
-    LOCAL char pbuffer[1024 * 2] = {0};//use heap jeremy
-
-    ESP_DBG("user_esp_platform_data_process %s, %d\n", pusrdata,length);
-
-    if (length == 1460) {
-        /*save the first segment of a big json data*/
-        memcpy(pbuffer, pusrdata, length);
-
-    } else {
-        /*put this part after the pirst segment,
-         *to deal with the complete data(1460<len<2048) this way */
-
-        if( length<=(2048 - strlen(pbuffer)) )
-            memcpy(pbuffer + strlen(pbuffer), pusrdata, length);
-        else
-            os_printf("ERR:arr_overflow,%u,%d,%d\n",__LINE__,length, 2048 - strlen(pbuffer) );
-
-        if ((pstr = (char *)strstr(pbuffer, "\"status\":")) != NULL) {
-            if (strncmp(pstr + 10, "400", 3) == 0) {
-                printf("ERROR! invalid json string.\n");
-                if(device_status = DEVICE_CONNECTING){
-                    device_status = DEVICE_ACTIVE_FAIL;
-                }
-
-                /*data is handled, zero the buffer bef exit*/
-                memset(pbuffer, 0, sizeof(pbuffer));
-                return;
-            }
-        }
-
-//        if ((pstr = (char *)strstr(pbuffer, "\"activate_status\": ")) != NULL &&
-//                user_esp_platform_parse_nonce(pbuffer) == active_nonce) {
-//
-//            if (strncmp(pstr + 19, "1", 1) == 0) {
-//                printf("device activates successful.\n");
-//                device_status = DEVICE_ACTIVE_DONE;
-//                esp_param.activeflag = 1;
-//                system_param_save_with_protect(ESP_PARAM_START_SEC, &esp_param, sizeof(esp_param));
-//                user_esp_platform_sent(pclient_param);
-//                if(LIGHT_DEVICE){
-//                    //system_restart(); //Jeremy.L why restart?
-//                }
-//            } else {
-//                printf("device activates failed.\n");
-//                device_status = DEVICE_ACTIVE_FAIL;
-//            }
-//        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_upgrade\"")) != NULL) {
-//            if ((pstr = (char *)strstr(pbuffer, "\"version\":")) != NULL) {
-//
-//                struct upgrade_server_info *server = NULL;
-//                int nonce = user_esp_platform_parse_nonce(pbuffer);
-//                user_platform_rpc_set_rsp(pclient_param, nonce);
-//                server = (struct upgrade_server_info *)zalloc(sizeof(struct upgrade_server_info));
-//                memcpy(server->upgrade_version, pstr + 12, 16);
-//                server->upgrade_version[15] = '\0';
-//                sprintf(server->pre_version,"%s%d.%d.%dt%d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
-//                        IOT_VERSION_MINOR,IOT_VERSION_REVISION,device_type,UPGRADE_FALG);
-//                user_esp_platform_upgrade_begin(pclient_param, server);
-//            }
-//        } else if ((pstr = (char *)strstr(pbuffer, "\"action\": \"sys_reboot\"")) != NULL) {
-//            os_timer_disarm(&client_timer);
-//            os_timer_setfn(&client_timer, (os_timer_func_t *)system_upgrade_reboot, NULL);
-//            os_timer_arm(&client_timer, 1000, 0);
-//        } else
-        if ((pstr = (char *)strstr(pbuffer, "/v1/device/timers/")) != NULL) {
-            int nonce = user_esp_platform_parse_nonce(pbuffer);
-            user_platform_rpc_set_rsp(pclient_param, nonce);
-            //printf("pclient_param sockfd %d\n",pclient_param->sock_fd);
-            //os_timer_disarm(&client_timer);
-            //os_timer_setfn(&client_timer, (os_timer_func_t *)user_platform_timer_get, pclient_param);
-            //os_timer_arm(&client_timer, 2000, 0);
-            user_platform_timer_get(pclient_param);
-
-        } else if ((pstr = (char *)strstr(pbuffer, "\"method\": ")) != NULL) {
-            if (strncmp(pstr + 11, "GET", 3) == 0) {
-                user_esp_platform_get_info(pclient_param, pbuffer);
-            } else if (strncmp(pstr + 11, "POST", 4) == 0) {
-                user_esp_platform_set_info(pclient_param, pbuffer);
-            }
-
-        } else if ((pstr = (char *)strstr(pbuffer, "ping success")) != NULL) {
-            printf("ping success\n");
-            ping_status = TRUE;
-
-        } else if ((pstr = (char *)strstr(pbuffer, "send message success")) != NULL) {
-        } else if ((pstr = (char *)strstr(pbuffer, "timers")) != NULL) {
-            user_platform_timer_start(pusrdata);
-        }
-
-        else if ((pstr = (char *)strstr(pbuffer, "device")) != NULL) {
-            user_platform_timer_get(pclient_param);
-        }
-
-        /*data is handled, zero the buffer bef exit*/
-        memset(pbuffer, 0, sizeof(pbuffer));
-    }
-
-}
-
-/******************************************************************************
- * FunctionName : user_esp_platform_ap_change
- * Description  : add the user interface for changing to next ap ID.
- * Parameters   :
- * Returns      : none
-*******************************************************************************/
-LOCAL void
-user_esp_platform_ap_change(void)
-{
-    uint8 current_id;
-    uint8 i = 0;
-
-    current_id = wifi_station_get_current_ap_id();
-    ESP_DBG("current ap id =%d\n", current_id);
-
-    if (current_id == AP_CACHE_NUMBER - 1) {
-       i = 0;
-    } else {
-       i = current_id + 1;
-    }
-    while (wifi_station_ap_change(i) != true) {
-    //try it out until universe collapses
-    ESP_DBG("try ap id =%d\n", i);
-    vTaskDelay(3000 / portTICK_RATE_MS);
-       i++;
-       if (i == AP_CACHE_NUMBER - 1) {
-           i = 0;
-       }
-    }
-
-}
-
-/******************************************************************************
- * FunctionName : user_esp_platform_check_conection
- * Description  : check and try to rebuild connection, parse ESP dns domain.
- * Parameters   : void
- * Returns      : connection stat as blow
- *enum{
- *  AP_DISCONNECTED = 0,
- *  AP_CONNECTED,
- *  DNS_SUCESSES,
- *};
-*******************************************************************************/
-LOCAL BOOL
-user_esp_platform_check_conection(void)
-{
-    u8 single_ap_retry_count = 0;
-    u8 dns_retry_count = 0;
-    u8 dns_ap_retry_count= 0;
-
-    struct ip_info ipconfig;
-    struct hostent* phostent = NULL;
-
-    memset(&ipconfig, 0, sizeof(ipconfig));
-    wifi_get_ip_info(STATION_IF, &ipconfig);
-
-
-    struct station_config *sta_config = (struct station_config *)zalloc(sizeof(struct station_config)*5);
-    int ap_num = wifi_station_get_ap_info(sta_config);
-    free(sta_config);
-
-#define MAX_DNS_RETRY_CNT 20
-#define MAX_AP_RETRY_CNT 200
-
-    do{
-        //what if the ap connect well but no ip offer, wait and wait again, time could be more longer
-        if(dns_retry_count == MAX_DNS_RETRY_CNT){
-            if(ap_num >= 2) user_esp_platform_ap_change();
-        }
-        dns_retry_count = 0;
-
-        while( (ipconfig.ip.addr == 0 || wifi_station_get_connect_status() != STATION_GOT_IP)){
-
-            /* if there are wrong while connecting to some AP, change to next and reset counter */
-            if (wifi_station_get_connect_status() == STATION_WRONG_PASSWORD ||
-                    wifi_station_get_connect_status() == STATION_NO_AP_FOUND ||
-                    wifi_station_get_connect_status() == STATION_CONNECT_FAIL ||
-                    (single_ap_retry_count++ > MAX_AP_RETRY_CNT)) {
-                if(ap_num >= 2){
-                    ESP_DBG("try other APs ...\n");
-                    user_esp_platform_ap_change();
-                }
-                ESP_DBG("connecting...\n");
-                single_ap_retry_count = 0;
-            }
-
-            vTaskDelay(3000/portTICK_RATE_MS);
-            wifi_get_ip_info(STATION_IF, &ipconfig);
-        }
-
-        do{
-            ESP_DBG("STA trying to parse esp domain name!\n");
-            phostent = (struct hostent *)gethostbyname(FW_UPGRADE_DOMAIN);
-
-            if(phostent == NULL){
-                vTaskDelay(500/portTICK_RATE_MS);
-            }else{
-                printf("Get DNS OK!\n");
-                break;
-            }
-
-        }while(dns_retry_count++ < MAX_DNS_RETRY_CNT);
-
-    }while(NULL == phostent && dns_ap_retry_count++ < AP_CACHE_NUMBER);
-
-    if(phostent!=NULL){
-
-        if( phostent->h_length <= 4 )
-            memcpy(&esp_server_ip,(char*)(phostent->h_addr_list[0]),phostent->h_length);
-        else
-            os_printf("ERR:arr_overflow,%u,%d\n",__LINE__, phostent->h_length );
-
-
-        printf("ESP_DOMAIN IP address: %s\n", inet_ntoa(esp_server_ip));
-
-        ping_status = TRUE;
-        free(phostent);
-        phostent = NULL;
-
-        return DNS_SUCESSES;
-    } else {
-        return DNS_FAIL;
-    }
-
-    if(ipconfig.ip.addr != 0){
-        return AP_CONNECTED;
-    }else{
-        return AP_DISCONNECTED;
-    }
-}
-
 
 /******************************************************************************
  * FunctionName : user_esp_platform_init
@@ -803,30 +410,32 @@ user_esp_platform_maintainer(void *pvParameters)
 	printf("wifi_station_get_ap num %d\n",ret);
 	if(0 == ret) {
 		/*AP_num == 0, no ap cached,start smartcfg*/
-		startSmartConfig();
+		PLTFM_startSmartConfig();
+
+		while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
+			ESP_DBG("Smart configuring...\n");
+			vTaskDelay(2000 / portTICK_RATE_MS);
+		}
+
 	}else{
 		reconnectAP();
+
+		while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
+			ESP_DBG("Connecting...\n");
+			vTaskDelay(2000 / portTICK_RATE_MS);
+		}
 	}
 
-	sntp_setservername(0, tSmartSocketParameter.cSNTP_Server[0]);
-	sntp_setservername(1, tSmartSocketParameter.cSNTP_Server[1]);
-	sntp_setservername(2, tSmartSocketParameter.cSNTP_Server[2]);
+	sntp_setservername(0, tSmartSocketParameter.sSNTP_Server[0]);
+	sntp_setservername(1, tSmartSocketParameter.sSNTP_Server[1]);
+	sntp_setservername(2, tSmartSocketParameter.sSNTP_Server[2]);
+	sntp_set_timezone(0);
 	sntp_init();
 
     while(1){
-//        os_printf("time:%u\r\n",unSNTPTime);
-//        os_printf("date:%s\r\n",sntp_get_real_time(unSNTPTime));
-        do{
-            ret = user_esp_platform_check_conection();
-        } while( AP_DISCONNECTED == ret || DNS_FAIL == ret);
-
-    	if (1 == tSmartSocketParameter.tConfigure.bReSmartConfig){
-    		tSmartSocketParameter.tConfigure.bReSmartConfig = 0;
-    		device_status = 0; //tSmartSocketParameter.tConfigure.bIPGotten = 0; //
-            wifi_station_disconnect();
-    		startSmartConfig();
-    	}
-
+    	// Internet functions will be located here to connect to server and listening
+    	// if there is any command like relay status change, upgrade or timer update
+    	// even if you are not in local network with smart plug
     	if ((1 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
     			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
     		user_plug_relay_schedule_action(sntp_get_current_timestamp());

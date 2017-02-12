@@ -450,7 +450,7 @@ debug_smart_config(const char *pValue)
 
     if(NULL != pJsonSub_enable){
         if(pJsonSub_enable->type == cJSON_Number){
-        	tSmartSocketParameter.tConfigure.bReSmartConfig = pJsonSub_enable->valueint;
+        	PLTFM_startSmartConfig();
             if(NULL != pJson){
             	cJSON_Delete(pJson);
             }
@@ -577,32 +577,32 @@ user_upgrade_start(const char *pValue)
         cJSON_Delete(pJson);
         return (-1);
     }
-    strncpy(tSmartSocketParameter.cFW_UpgradeServer, pJsonSub->valuestring, sizeof(tSmartSocketParameter.cFW_UpgradeServer));
-    tSmartSocketParameter.cFW_UpgradeServer[sizeof(tSmartSocketParameter.cFW_UpgradeServer) - 1] = '\0';
+    strncpy(tSmartSocketParameter.sFW_UpgradeServer, pJsonSub->valuestring, sizeof(tSmartSocketParameter.sFW_UpgradeServer));
+    tSmartSocketParameter.sFW_UpgradeServer[sizeof(tSmartSocketParameter.sFW_UpgradeServer) - 1] = '\0';
 
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_host")) == NULL){
         printf("cJSON_GetObjectItem upgrade_host fail\n");
         cJSON_Delete(pJson);
         return (-1);
     }
-    strncpy(tSmartSocketParameter.cFW_UpgradeHost, pJsonSub->valuestring, sizeof(tSmartSocketParameter.cFW_UpgradeHost));
-    tSmartSocketParameter.cFW_UpgradeHost[sizeof(tSmartSocketParameter.cFW_UpgradeHost) - 1] = '\0';
+    strncpy(tSmartSocketParameter.sFW_UpgradeHost, pJsonSub->valuestring, sizeof(tSmartSocketParameter.sFW_UpgradeHost));
+    tSmartSocketParameter.sFW_UpgradeHost[sizeof(tSmartSocketParameter.sFW_UpgradeHost) - 1] = '\0';
 
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_token")) == NULL){
         printf("cJSON_GetObjectItem update_token fail\n");
         cJSON_Delete(pJson);
         return (-1);
     }
-    memcpy(tSmartSocketParameter.cFW_UpgradeToken, pJsonSub->valuestring, UPGRADE_TOKEN_LENGTH);
-    tSmartSocketParameter.cFW_UpgradeToken[UPGRADE_TOKEN_LENGTH] = '\0';
+    memcpy(tSmartSocketParameter.sFW_UpgradeToken, pJsonSub->valuestring, UPGRADE_TOKEN_LENGTH);
+    tSmartSocketParameter.sFW_UpgradeToken[UPGRADE_TOKEN_LENGTH] = '\0';
 
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_url")) == NULL){
         printf("cJSON_GetObjectItem upgrade_url fail\n");
         cJSON_Delete(pJson);
         return (-1);
     }
-    memcpy(tSmartSocketParameter.cFW_UpgradeUrl, pJsonSub->valuestring, UPGRADE_URL_LENGTH);
-    tSmartSocketParameter.cFW_UpgradeUrl[UPGRADE_URL_LENGTH] = '\0';
+    memcpy(tSmartSocketParameter.sFW_UpgradeUrl, pJsonSub->valuestring, UPGRADE_URL_LENGTH);
+    tSmartSocketParameter.sFW_UpgradeUrl[UPGRADE_URL_LENGTH] = '\0';
 
     if((pJsonSub = cJSON_GetObjectItem(pJsonSubSet, "upgrade_port")) != NULL){
         if ((pJsonSub->valueint > 0) && (pJsonSub->valueint <= MAX_TCP_PORT)){
@@ -793,7 +793,7 @@ update_url_get(cJSON *pcjson, const char* pname)
         return (-1);
     }
     cJSON_AddItemToObject(pcjson, "Response", pSubJsonResponse);
-    cJSON_AddStringToObject(pSubJsonResponse, "upgrade_url", tSmartSocketParameter.cFW_UpgradeServer);
+    cJSON_AddStringToObject(pSubJsonResponse, "upgrade_url", tSmartSocketParameter.sFW_UpgradeServer);
     cJSON_AddNumberToObject(pSubJsonResponse, "upgrade_port", tSmartSocketParameter.unFW_UpgradePort);
 
 	return 0;
@@ -963,7 +963,7 @@ sntp_set(const char* pValue)
                 cJSON_Delete(pJson);
                 return (-1);
         	}else{
-        		strcpy(tSmartSocketParameter.cSNTP_Server[unIndex], pJsonSubURL->valuestring);
+        		strcpy(tSmartSocketParameter.sSNTP_Server[unIndex], pJsonSubURL->valuestring);
         	}
         }
 
@@ -1032,7 +1032,7 @@ sntp_get(cJSON *pcjson, const char* pname)
 
     for (unIndex = 0; unIndex < MAX_SNTP_SERVER_NUM; unIndex++){
     	sprintf(cServerName, "server_%u", unIndex);
-        cJSON_AddStringToObject(pSubJsonResponse, cServerName, tSmartSocketParameter.cSNTP_Server[unIndex]);
+        cJSON_AddStringToObject(pSubJsonResponse, cServerName, tSmartSocketParameter.sSNTP_Server[unIndex]);
     }
 
 	return 0;

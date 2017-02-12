@@ -45,6 +45,12 @@
 #define IS_RELAY_SCHEDULE_EMPTY(index)	(tSmartSocketParameter.tRelaySchedule[(index)].unRelayCloseTime == \
 											tSmartSocketParameter.tRelaySchedule[(index)].unRelayOpenTime)
 
+#define PLUG_STATUS_CLOSE				1
+#define PLUG_STATUS_OPEN				0
+
+#define TIMER_SAVE_FLASH_NUMBER 		10
+#define EACH_TIMER_SAVE_FLASH_MAX_LEN 	32
+
 typedef enum{
 	USER_DATA_EVENT_HISTORY = 0,	// event history
 	USER_DATA_CONF_PARA,			// configure parameter
@@ -95,24 +101,25 @@ typedef struct SmartSocketParameter{
 		uint32 bSNTPEnable : 1;
 		uint32 bButtonRelayEnable : 1;
 		uint32 bTrendEnable : 1;
-		uint32 bReSmartConfig : 1;
+//		uint32 bReSmartConfig : 1;
 		uint32 bRelayScheduleEnable : 1;
 		uint32 bCurrentFailed : 1;
 //		uint32 bIPGotten : 1;
 		uint32 bJustLongPressed : 1;
 		uint32 bFWUpgradeReset : 1;
-		uint32 unused : 24;
+		uint32 unused : 25;
 	}tConfigure;
-	char cSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
-	char cFW_UpgradeServer[MAX_UPDATE_SERVER_ADDR_LEN];
-	char cFW_UpgradeHost[MAX_UPDATE_SERVER_HOST_LEN];
+	char sSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
+	char sFW_UpgradeServer[MAX_UPDATE_SERVER_ADDR_LEN];
+	char sFW_UpgradeHost[MAX_UPDATE_SERVER_HOST_LEN];
 	uint16 unFW_UpgradePort;
-	char cFW_UpgradeToken[UPGRADE_TOKEN_LENGTH + 1];
-	char cFW_UpgradeUrl[UPGRADE_URL_LENGTH + 1];
+	char sFW_UpgradeToken[UPGRADE_TOKEN_LENGTH + 1];
+	char sFW_UpgradeUrl[UPGRADE_URL_LENGTH + 1];
 	RelaySchedule_t tRelaySchedule[RELAY_SCHEDULE_NUM];
 	float fCurrentThreshold;
 	uint32 unTrendRecordNum;
 	uint32 unValidation;	//TODO: use CRC of tEvent array data
+	char sTimerSplitsString[TIMER_SAVE_FLASH_NUMBER][EACH_TIMER_SAVE_FLASH_MAX_LEN];
 }SmartSocketParameter_t;
 
 typedef struct TrendContent{

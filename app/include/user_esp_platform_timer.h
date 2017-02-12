@@ -5,15 +5,15 @@
 
 struct esp_platform_wait_timer_param {
     int wait_time_second;
-    uint8 wait_time_param[12];
-    uint8 wait_action[16];
+    char wait_time_param[12];
+    char wait_action[16];
 };
 
 struct wait_param {
     uint32 min_time_backup;
     uint16 action_number;
     uint16 count;
-    uint8 action[TIMER_NUMBER][15];
+    char action[TIMER_NUMBER][15];
 };
 
 struct timer_bkup_param{

@@ -14,6 +14,7 @@
 #include "user_plug.h"
 #include "user_data.h"
 #include "smart_socket_global.h"
+#include "user_esp_platform.h"
 
 /* NOTICE---this is for 4096KB spi flash with 1024+3072.
  * you can change to other sector if you use other size spi flash. */
@@ -22,67 +23,34 @@
 #define PRIV_PARAM_SAVE     0
 
 #define PLUG_USER_KEY_NUM	1
-#define RELAY_CLOSE_VALUE	1
-#define RELAY_OPEN_VALUE	0
 
-#define NEW_BOARD
-#ifdef NEW_BOARD
-	#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO2_U
-	#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO2
-	#define PLUG_LINK_LED_IO_PIN  	GPIO_Pin_2
-	#define PLUG_LINK_LED_PIN_NUM	2
+#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO2_U
+#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO2
+#define PLUG_LINK_LED_IO_PIN  	GPIO_Pin_2
+#define PLUG_LINK_LED_PIN_NUM	2
 
-	#define PLUG_USR_KEY_IO_MUX		PERIPHS_IO_MUX_MTDO_U
-	#define PLUG_USR_KEY_IO_FUNC	FUNC_GPIO15
-	#define PLUG_USR_KEY_IO_PIN  	GPIO_Pin_15
-	#define PLUG_USR_KEY_PIN_NUM	15
+#define PLUG_USR_KEY_IO_MUX		PERIPHS_IO_MUX_MTDO_U
+#define PLUG_USR_KEY_IO_FUNC	FUNC_GPIO15
+#define PLUG_USR_KEY_IO_PIN  	GPIO_Pin_15
+#define PLUG_USR_KEY_PIN_NUM	15
 
-	#define RELAY_LED_IO_MUX		PERIPHS_IO_MUX_GPIO0_U
-	#define RELAY_LED_IO_FUNC		FUNC_GPIO0
-	#define RELAY_LED_IO_PIN  		GPIO_Pin_0
-	#define RELAY_LED_PIN_NUM		0
+#define RELAY_LED_IO_MUX		PERIPHS_IO_MUX_GPIO0_U
+#define RELAY_LED_IO_FUNC		FUNC_GPIO0
+#define RELAY_LED_IO_PIN  		GPIO_Pin_0
+#define RELAY_LED_PIN_NUM		0
 
-	#define RELAY_IO_MUX			PERIPHS_IO_MUX_GPIO4_U
-	#define RELAY_IO_FUNC			FUNC_GPIO4
-	#define RELAY_IO_PIN  			GPIO_Pin_4
-	#define RELAY_PIN_NUM			4
+#define RELAY_IO_MUX			PERIPHS_IO_MUX_GPIO4_U
+#define RELAY_IO_FUNC			FUNC_GPIO4
+#define RELAY_IO_PIN  			GPIO_Pin_4
+#define RELAY_PIN_NUM			4
 
-	#define RELAY_LED_ON()			GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 0)
-	#define RELAY_LED_OFF()			GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 1)
+#define RELAY_LED_ON()			GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 0)
+#define RELAY_LED_OFF()			GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 1)
 
-	#define RELAY_CLOSE()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 1)
-	#define RELAY_OPEN()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 0)
+#define RELAY_CLOSE()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 1)
+#define RELAY_OPEN()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 0)
 
-	#define RELAY_GET_STATE()		((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(RELAY_CLOSE_VALUE):(RELAY_OPEN_VALUE))
-#else
-	#define PLUG_LINK_LED_IO_MUX	PERIPHS_IO_MUX_GPIO4_U
-	#define PLUG_LINK_LED_IO_FUNC	FUNC_GPIO4
-	#define PLUG_LINK_LED_IO_PIN  	GPIO_Pin_4
-	#define PLUG_LINK_LED_PIN_NUM	4
-
-	#define PLUG_USR_KEY_IO_MUX		PERIPHS_IO_MUX_MTDO_U
-	#define PLUG_USR_KEY_IO_FUNC	FUNC_GPIO15
-	#define PLUG_USR_KEY_IO_PIN  	GPIO_Pin_15
-	#define PLUG_USR_KEY_PIN_NUM	15
-
-	#define RELAY_LED_IO_MUX		PERIPHS_IO_MUX_GPIO0_U
-	#define RELAY_LED_IO_FUNC		FUNC_GPIO0
-	#define RELAY_LED_IO_PIN  		GPIO_Pin_0
-	#define RELAY_LED_PIN_NUM		0
-
-	#define RELAY_IO_MUX			PERIPHS_IO_MUX_GPIO2_U
-	#define RELAY_IO_FUNC			FUNC_GPIO2
-	#define RELAY_IO_PIN  			GPIO_Pin_2
-	#define RELAY_PIN_NUM			2
-
-	#define RELAY_LED_ON()			GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 0)
-	#define RELAY_LED_OFF()			GPIO_OUTPUT_SET(RELAY_LED_PIN_NUM, 1)
-
-	#define RELAY_CLOSE()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 0)
-	#define RELAY_OPEN()			GPIO_OUTPUT_SET(RELAY_PIN_NUM, 1)
-
-	#define RELAY_GET_STATE()		((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(0):(1))
-#endif
+#define RELAY_GET_STATE()		((GPIO_INPUT_GET(RELAY_PIN_NUM) == 1)?(PLUG_STATUS_CLOSE):(PLUG_STATUS_OPEN))
 
 #define PLUG_LINK_LED_ON		GPIO_OUTPUT_SET(PLUG_LINK_LED_PIN_NUM, 0)
 #define PLUG_LINK_LED_OFF		GPIO_OUTPUT_SET(PLUG_LINK_LED_PIN_NUM, 1)
@@ -133,44 +101,6 @@ bool user_plug_relay_schedule_validation(uint8_t unIndex, uint32_t unCloseTime, 
 }
 
 /******************************************************************************
- * FunctionName : user_plug_relay_schedule_action
- * Description  : check if relay schedule recipe need to be executed
- * Parameters   : uint32_t unSystemTime
- * Returns      : bool - execute fail/success
-*******************************************************************************/
-bool user_plug_relay_schedule_action(uint32_t unSystemTime)
-{
-	uint32_t unSecondInDay;
-	uint8_t unRecipeIndex;
-
-	if (unSystemTime < 1485273600){	// 2017/01/25 0:0:0
-		return false;
-	}
-	// change to UTC time
-	unSystemTime -= (RELAY_SCHEDULE_TIME_ZONE * SECSPERHOUR);
-	unSecondInDay = unSystemTime % SECSPERDAY;
-//	printf("unSecondInDay is %u.\n", unSecondInDay);
-
-	for (unRecipeIndex = 0; unRecipeIndex < RELAY_SCHEDULE_NUM; unRecipeIndex++){
-		if (!(IS_RELAY_SCHEDULE_EMPTY(unRecipeIndex))){
-			if ((unSecondInDay >= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayCloseTime) &&
-					(unSecondInDay <= tSmartSocketParameter.tRelaySchedule[unRecipeIndex].unRelayOpenTime)){
-				if (user_plug_get_status() != RELAY_CLOSE_VALUE){
-					user_plug_set_status(RELAY_CLOSE_VALUE);
-				}
-				return true;
-			}
-		}
-	}
-
-	// open
-	if (user_plug_get_status() != RELAY_OPEN_VALUE){
-		user_plug_set_status(RELAY_OPEN_VALUE);
-	}
-	return true;
-}
-
-/******************************************************************************
  * FunctionName : user_plug_get_status
  * Description  : get plug's status, 0x00 or 0x01
  * Parameters   : none
@@ -196,11 +126,11 @@ user_plug_set_status(bool status)
 		return;
 	}
 //	printf("status input! %d\n", status);
-	if (RELAY_CLOSE_VALUE == status){
+	if (PLUG_STATUS_CLOSE == status){
 		RELAY_CLOSE();
 		RELAY_LED_ON();
 		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
-	}else if(RELAY_OPEN_VALUE == status){
+	}else if(PLUG_STATUS_OPEN == status){
 		RELAY_OPEN();
 		RELAY_LED_OFF();
 		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
@@ -217,7 +147,7 @@ user_plug_set_status(bool status)
 void
 user_plug_toggle_status(void)
 {
-	user_plug_set_status((RELAY_CLOSE_VALUE == (RELAY_GET_STATE()))?(RELAY_OPEN_VALUE):(RELAY_CLOSE_VALUE));
+	user_plug_set_status((PLUG_STATUS_CLOSE == (RELAY_GET_STATE()))?(PLUG_STATUS_OPEN):(PLUG_STATUS_CLOSE));
 }
 
 /******************************************************************************
@@ -249,8 +179,7 @@ LOCAL void
 user_plug_long_press(void)
 {
 	printf("Long press!\n");
-	tSmartSocketParameter.tConfigure.bJustLongPressed = 1;
-	tSmartSocketParameter.tConfigure.bReSmartConfig = 1;
+	PLTFM_startSmartConfig();
 }
 
 /******************************************************************************
