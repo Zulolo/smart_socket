@@ -60,8 +60,11 @@ LOCAL struct keys_param keys;
 LOCAL struct single_key_param *user_key[PLUG_USER_KEY_NUM];
 LOCAL os_timer_t link_led_timer;
 LOCAL uint8 link_led_level = 0;
+LOCAL os_timer_t relay_led_timer;
+LOCAL uint8 relay_led_level = 0;
 //LOCAL uint8 device_status;
-SmartSocketParameter_t tSmartSocketParameter;
+extern SmartSocketParameter_t tSmartSocketParameter;
+extern xSemaphoreHandle xSmartSocketCaliSemaphore;
 //extern bool smartconfig_start(sc_callback_t cb, ...);
 //extern bool smartconfig_stop(void);
 //extern void ICACHE_FLASH_ATTR smartconfig_done(sc_status status, void *pdata);
@@ -128,11 +131,11 @@ user_plug_set_status(bool status)
 //	printf("status input! %d\n", status);
 	if (PLUG_STATUS_CLOSE == status){
 		RELAY_CLOSE();
-		RELAY_LED_ON();
+		user_relay_led_output(LED_ON);
 		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 1);
 	}else if(PLUG_STATUS_OPEN == status){
 		RELAY_OPEN();
-		RELAY_LED_OFF();
+		user_relay_led_output(LED_OFF);
 		DAT_nAddEventHistory(system_get_time(), SMART_SOCKET_EVENT_REMOTE, 0);
 	}
 
@@ -159,13 +162,17 @@ user_plug_toggle_status(void)
 LOCAL void
 user_plug_short_press(void)
 {
-	printf("Short press!\n");
 	if (1 == tSmartSocketParameter.tConfigure.bJustLongPressed){
 		tSmartSocketParameter.tConfigure.bJustLongPressed = 0;
 	}else if ((1 == tSmartSocketParameter.tConfigure.bButtonRelayEnable) &&
 //			(0 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
 			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
-		user_plug_toggle_status();
+		printf("Short press!\n");
+		if (true == tSmartSocketParameter.tConfigure.bCS5463Cali){
+			xSemaphoreGive(xSmartSocketCaliSemaphore);
+		}else{
+			user_plug_toggle_status();
+		}
 	}
 }
 
@@ -181,6 +188,85 @@ user_plug_long_press(void)
 	printf("Long press!\n");
 	tSmartSocketParameter.tConfigure.bJustLongPressed = 1;
 	PLTFM_startSmartConfig();
+}
+
+/******************************************************************************
+ * FunctionName : user_relay_led_init
+ * Description  : int led gpio
+ * Parameters   : none
+ * Returns      : none
+*******************************************************************************/
+LOCAL void
+user_relay_led_init(void)
+{
+	GPIO_ConfigTypeDef io_out_conf;
+
+	printf("Configure user relay LED pin.\n");
+
+	PIN_FUNC_SELECT(RELAY_LED_IO_MUX, RELAY_LED_IO_FUNC);
+	io_out_conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
+	io_out_conf.GPIO_Mode = GPIO_Mode_Output;
+	io_out_conf.GPIO_Pin = RELAY_LED_IO_PIN ;
+	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
+	gpio_config(&io_out_conf);
+	user_relay_led_output(LED_OFF);
+}
+
+LOCAL void
+user_relay_led_timer_cb(void)
+{
+	relay_led_level = (~relay_led_level) & 0x01;
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(RELAY_LED_PIN_NUM), relay_led_level);
+}
+
+void
+user_relay_led_timer_init(int time)
+{
+    os_timer_disarm(&relay_led_timer);
+    os_timer_setfn(&relay_led_timer, (os_timer_func_t *)user_relay_led_timer_cb, NULL);
+    os_timer_arm(&relay_led_timer, time, 1);
+    relay_led_level = 0;
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(RELAY_LED_PIN_NUM), relay_led_level);
+}
+
+/******************************************************************************
+ * FunctionName : user_relay_led_output
+ * Description  : led flash mode
+ * Parameters   : mode, on/off/xhz
+ * Returns      : none
+*******************************************************************************/
+void
+user_relay_led_output(UserLedPattern_t tPattern)
+{
+
+    switch (tPattern) {
+        case LED_OFF:
+            os_timer_disarm(&relay_led_timer);
+            RELAY_LED_OFF();
+            break;
+
+        case LED_ON:
+            os_timer_disarm(&relay_led_timer);
+            RELAY_LED_ON();
+            break;
+
+        case LED_1HZ:
+        	user_relay_led_timer_init(1000);
+            break;
+
+        case LED_5HZ:
+        	user_relay_led_timer_init(200);
+            break;
+
+        case LED_20HZ:
+        	user_relay_led_timer_init(50);
+            break;
+
+        default:
+            printf("ERROR:Relay LED MODE WRONG!\n");
+            break;
+    }
+
 }
 
 /******************************************************************************
@@ -221,15 +307,7 @@ user_link_led_timer_init(int time)
     link_led_level = 0;
     GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_PIN_NUM), link_led_level);
 }
-/*
-void
-user_link_led_timer_done(void)
-{
-    os_timer_disarm(&link_led_timer);
 
-    GPIO_OUTPUT_SET(GPIO_ID_PIN(PLUG_LINK_LED_IO_NUM), 1);
-}
-*/
 /******************************************************************************
  * FunctionName : user_link_led_output
  * Description  : led flash mode
@@ -237,7 +315,7 @@ user_link_led_timer_done(void)
  * Returns      : none
 *******************************************************************************/
 void
-user_link_led_output(UserLinkLedPattern_t tPattern)
+user_link_led_output(UserLedPattern_t tPattern)
 {
 
     switch (tPattern) {
@@ -264,7 +342,7 @@ user_link_led_output(UserLinkLedPattern_t tPattern)
             break;
 
         default:
-            printf("ERROR:LED MODE WRONG!\n");
+            printf("ERROR:Link LED MODE WRONG!\n");
             break;
     }
 
@@ -294,14 +372,6 @@ void relayInit(void)
 	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
 	gpio_config(&io_out_conf);
 	RELAY_OPEN();
-
-	PIN_FUNC_SELECT(RELAY_LED_IO_MUX, RELAY_LED_IO_FUNC);
-	io_out_conf.GPIO_IntrType = GPIO_PIN_INTR_DISABLE;
-	io_out_conf.GPIO_Mode = GPIO_Mode_Output;
-	io_out_conf.GPIO_Pin = RELAY_LED_IO_PIN ;
-	io_out_conf.GPIO_Pullup = GPIO_PullUp_DIS;
-	gpio_config(&io_out_conf);
-	RELAY_LED_OFF();
 }
 
 /******************************************************************************
@@ -316,6 +386,7 @@ user_plug_init(void)
     printf("user_plug_init start!\n");
 
     user_link_led_init();
+    user_relay_led_init();
 
 //    wifi_status_led_install(PLUG_WIFI_LED_PIN_NUM, PLUG_WIFI_LED_IO_MUX, PLUG_WIFI_LED_IO_FUNC);
 

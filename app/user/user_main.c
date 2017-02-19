@@ -139,13 +139,14 @@ int32_t systemInit(void)
 {
 	vSemaphoreCreateBinary(xSmartSocketEventListSemaphore);
 	vSemaphoreCreateBinary(xSmartSocketParameterSemaphore);
+	vSemaphoreCreateBinary(xSmartSocketCaliSemaphore);
 
 	if((NULL == xSmartSocketEventListSemaphore) || (NULL == xSmartSocketParameterSemaphore)){
 		printf("Create semaphore failed.\n");
 		return (-1);
 	}
 
-    if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+    if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
         if (system_param_load(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA), 0,
         		&tSmartSocketParameter, sizeof(tSmartSocketParameter)) != true){
         	xSemaphoreGive(xSmartSocketParameterSemaphore);

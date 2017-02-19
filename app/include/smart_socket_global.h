@@ -76,8 +76,8 @@ typedef enum{
     LED_ON  = 1,
     LED_1HZ,
     LED_5HZ,
-    LED_20HZ,
-}UserLinkLedPattern_t;
+    LED_20HZ
+}UserLedPattern_t;
 
 typedef struct SmartSocketEvent{
     uint32 unTime;	// UTC seconds
@@ -105,6 +105,18 @@ typedef struct timer_bkup_param{
 //    char pad;
 }TimerBkup_para_t;
 
+typedef struct CS5463_valid_para{
+	uint32 unValidation;
+	uint32 unAC_V_Offset;
+	uint32 unAC_V_Gain;
+	uint32 unDC_V_Offset;
+	uint32 unDC_V_Gain;
+	uint32 unAC_I_Offset;
+	uint32 unAC_I_Gain;
+	uint32 unDC_I_Offset;
+	uint32 unDC_I_Gain;
+}CS5463Valid_para_t;
+
 typedef struct SmartSocketParameter{
 	struct
 	{
@@ -117,7 +129,8 @@ typedef struct SmartSocketParameter{
 //		uint32 bSchdTimer : 1;
 		uint32 bJustLongPressed : 1;
 		uint32 bFWUpgradeReset : 1;
-		uint32 unused : 26;
+		uint32 bCS5463Cali : 1;
+		uint32 unused : 25;
 	}tConfigure;
 	char sSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
 	char sFW_UpgradeServer[MAX_UPDATE_SERVER_ADDR_LEN];
@@ -131,6 +144,7 @@ typedef struct SmartSocketParameter{
 	uint32 unValidation;	//TODO: use CRC of tEvent array data
 	TimerBkup_para_t tTimerBkupParam;
 	char sTimerSplitsString[TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN];
+	CS5463Valid_para_t tCS5463Valid;
 }SmartSocketParameter_t;
 
 typedef struct TrendContent{

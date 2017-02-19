@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "driver/spi_register.h"
 #include "driver/spi_interface.h"
+#include "smart_socket_global.h"
 #include "cs5463.h"
 #include "user_data.h"
 
@@ -34,6 +35,134 @@ static float fCS5463_VRMS;
 static float fCS5463_P;
 
 //FLASH_SECTOR_SIZE
+extern SmartSocketParameter_t tSmartSocketParameter;
+extern xSemaphoreHandle xSmartSocketCaliSemaphore;
+
+typedef enum{
+	CS5463_CALI_STATE_STOP = 0,	// Stop
+	CS5463_CALI_STATE_WAITING_START,
+	CS5463_CALI_STATE_DC_V_OFFSET,
+	CS5463_CALI_STATE_AC_V_OFFSET,
+	CS5463_CALI_STATE_AC_V_GAIN,
+	CS5463_CALI_STATE_DC_I_OFFSET,
+	CS5463_CALI_STATE_AC_I_OFFSET,
+	CS5463_CALI_STATE_AC_I_GAIN,
+	CS5463_CALI_STATE_RESET
+}CS5463CaliState_t;
+
+int32_t CS5463IF_Cali(void)
+{
+	CS5463CaliState_t tCaliState;
+	uint8_t unPara[3];
+	tCaliState = CS5463_CALI_STATE_WAITING_START;
+
+//	memset(&(tSmartSocketParameter.tCS5463Valid), 0, sizeof(tSmartSocketParameter.tCS5463Valid));
+	user_plug_set_status(PLUG_STATUS_CLOSE);
+	user_relay_led_output(LED_1HZ);
+	xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(1000/portTICK_RATE_MS));
+	while ((true == tSmartSocketParameter.tConfigure.bCS5463Cali) &&
+			(tCaliState != CS5463_CALI_STATE_STOP)){
+		switch (tCaliState){
+		case CS5463_CALI_STATE_WAITING_START:
+			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+				tCaliState = CS5463_CALI_STATE_DC_V_OFFSET;
+			}else{
+				printf("CS5463 DC voltage offset calibration timeout, exit...\n");
+				tCaliState = CS5463_CALI_STATE_STOP;
+		    }
+			break;
+		case CS5463_CALI_STATE_DC_V_OFFSET:
+			user_relay_led_output(LED_5HZ);
+
+			CS5463IF_WriteCmd(CS5463_CMD_SW_RESET);
+			vTaskDelay(10/portTICK_RATE_MS);
+			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
+			vTaskDelay(20/portTICK_RATE_MS);
+
+			unPara[0] = 0;
+			unPara[1] = 0;
+			unPara[2] = 0;
+			CS5463IF_WriteReg(CS5463_CMD_WR_STATUS, unPara, sizeof(unPara));
+
+			user_relay_led_output(LED_1HZ);
+			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+				tCaliState = CS5463_CALI_STATE_AC_V_OFFSET;
+			}else{
+				printf("CS5463 calibration AC voltage offset timeout, exit...\n");
+				tCaliState = CS5463_CALI_STATE_STOP;
+		    }
+			break;
+
+		case CS5463_CALI_STATE_AC_V_OFFSET:
+			user_relay_led_output(LED_5HZ);
+
+			user_relay_led_output(LED_1HZ);
+			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+				tCaliState = CS5463_CALI_STATE_AC_V_GAIN;
+			}else{
+				printf("CS5463 calibration AC voltage gain timeout, exit...\n");
+				tCaliState = CS5463_CALI_STATE_STOP;
+		    }
+			break;
+
+		case CS5463_CALI_STATE_AC_V_GAIN:
+			user_relay_led_output(LED_5HZ);
+
+			user_relay_led_output(LED_1HZ);
+			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+				tCaliState = CS5463_CALI_STATE_DC_I_OFFSET;
+			}else{
+				printf("CS5463 calibration DC current offset timeout, exit...\n");
+				tCaliState = CS5463_CALI_STATE_STOP;
+		    }
+			break;
+
+		case CS5463_CALI_STATE_DC_I_OFFSET:
+			user_relay_led_output(LED_5HZ);
+
+			user_relay_led_output(LED_1HZ);
+			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+				tCaliState = CS5463_CALI_STATE_AC_I_OFFSET;
+			}else{
+				printf("CS5463 calibration AC current offset timeout, exit...\n");
+				tCaliState = CS5463_CALI_STATE_STOP;
+		    }
+			break;
+
+		case CS5463_CALI_STATE_AC_I_OFFSET:
+			user_relay_led_output(LED_5HZ);
+
+			user_relay_led_output(LED_1HZ);
+			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+				tCaliState = CS5463_CALI_STATE_AC_I_GAIN;
+			}else{
+				printf("CS5463 calibration AC current gain timeout, exit...\n");
+				tCaliState = CS5463_CALI_STATE_STOP;
+		    }
+			break;
+
+		case CS5463_CALI_STATE_AC_I_GAIN:
+			user_relay_led_output(LED_5HZ);
+
+			user_relay_led_output(LED_1HZ);
+			tCaliState = CS5463_CALI_STATE_RESET;
+			break;
+
+		case CS5463_CALI_STATE_RESET:
+
+			user_relay_led_output(LED_OFF);
+			tCaliState = CS5463_CALI_STATE_STOP;
+			break;
+
+		default:
+			printf("CS5463 calibration state error.\n");
+			tCaliState = CS5463_CALI_STATE_STOP;
+			break;
+		}
+	}
+	tSmartSocketParameter.tConfigure.bCS5463Cali = false;
+	return 0;
+}
 
 void writeCS5463SPI(uint8_t unCmd)
 {
@@ -64,9 +193,9 @@ int32_t CS5463IF_WriteCmd(uint8_t unWriteCmd)
 {
 	CS5463_SELECT();
 	writeCS5463SPI(unWriteCmd);
-	writeCS5463SPI(CS5463_CMD_SYNC_1);
-	writeCS5463SPI(CS5463_CMD_SYNC_1);
-	writeCS5463SPI(CS5463_CMD_SYNC_1);
+//	writeCS5463SPI(CS5463_CMD_SYNC_1);
+//	writeCS5463SPI(CS5463_CMD_SYNC_1);
+//	writeCS5463SPI(CS5463_CMD_SYNC_1);
 	CS5463_DESELECT();
 	return 0;
 }

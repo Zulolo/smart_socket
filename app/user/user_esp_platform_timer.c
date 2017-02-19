@@ -350,7 +350,7 @@ user_platform_timer_bkup(void)
 	tSmartSocketParameter.tTimerBkupParam.unMagic = 0xa5a5;
 	tSmartSocketParameter.tTimerBkupParam.unBufferSize = tTimerParam.unBufferSize;
     memcpy(tSmartSocketParameter.sTimerSplitsString, tTimerParam.pSplitBuffer, tTimerParam.unBufferSize);
-	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
 		xSemaphoreGive(xSmartSocketParameterSemaphore);
@@ -404,7 +404,7 @@ user_platform_timer_reset(void)
 	tSmartSocketParameter.tTimerBkupParam.unMagic = 0;
 	tSmartSocketParameter.tTimerBkupParam.unBufferSize = 0;
     memset(tSmartSocketParameter.sTimerSplitsString, 0, TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN);
-	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
 		xSemaphoreGive(xSmartSocketParameterSemaphore);

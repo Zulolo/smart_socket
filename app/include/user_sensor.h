@@ -22,13 +22,13 @@
 #define SENSOR_UNUSED_LED_IO_NUM     15
 #define SENSOR_UNUSED_LED_IO_FUNC    FUNC_GPIO15
 
-enum {
-    LED_OFF = 0,
-    LED_ON  = 1,
-    LED_1HZ,
-    LED_5HZ,
-    LED_20HZ,
-};
+//enum {
+//    LED_OFF = 0,
+//    LED_ON  = 1,
+//    LED_1HZ,
+//    LED_5HZ,
+//    LED_20HZ,
+//};
 
 #if HUMITURE_SUB_DEVICE
 bool user_mvh3004_read_th(uint8 *data);

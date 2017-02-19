@@ -225,7 +225,7 @@ smartconfig_done(sc_status status, void *pdata)
             }
             smartconfig_stop();
             
-            user_link_led_output(LED_OFF);
+            user_link_led_output(LED_ON);
             device_status = DEVICE_GOT_IP;
 //            tSmartSocketParameter.tConfigure.bIPGotten = 1;
             break;

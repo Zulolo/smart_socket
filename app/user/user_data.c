@@ -12,12 +12,13 @@
 
 xSemaphoreHandle xSmartSocketEventListSemaphore;
 xSemaphoreHandle xSmartSocketParameterSemaphore;
+xSemaphoreHandle xSmartSocketCaliSemaphore;
 SmartSocketEventList_t tSmartSocketEventList;
 SmartSocketParameter_t tSmartSocketParameter;
 
 int32_t DAT_nFlashDataClean(void)
 {
-	if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
+	if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
 		memset(&tSmartSocketEventList, 0, sizeof(tSmartSocketEventList));
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_EVENT_HISTORY),
 						&tSmartSocketEventList, sizeof(tSmartSocketEventList));
@@ -27,7 +28,7 @@ int32_t DAT_nFlashDataClean(void)
 		return (-1);
     }
 
-	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE){
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE){
 		memset(&tSmartSocketParameter, 0, sizeof(tSmartSocketParameter));
 		tSmartSocketParameter.unValidation = 0xA5A5A5A5;
 		tSmartSocketParameter.tConfigure.bButtonRelayEnable = 1;
@@ -66,7 +67,7 @@ bool DAT_bTrendRecordAdd(TrendContent_t tValueNeedToAdd)
 
 	// increase record number first in case data was actually written but during increasing exception happens
 	// !!!! some bytes can be empty at end of each sector !!!!
-	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
 		tSmartSocketParameter.unTrendRecordNum++;
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 						&tSmartSocketParameter, sizeof(tSmartSocketParameter));
@@ -202,7 +203,7 @@ TrendContent_t* DAT_pGetTrends(uint32_t unStartTime, uint32_t unEndTime, uint8_t
 
 int32_t DAT_nAddEventHistory(uint64 unTime, EventType_t tEventType, uint32_t unData)	//void* pData, uint8_t unDataLen)
 {
-    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
+    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
     	tSmartSocketEventList.tEvent[tSmartSocketEventList.unEventNum % EVENT_HISTORY_MAX_RECORD_NUM].unTime = sntp_get_current_timestamp();
     	tSmartSocketEventList.tEvent[tSmartSocketEventList.unEventNum % EVENT_HISTORY_MAX_RECORD_NUM].tEventType = tEventType;
     	tSmartSocketEventList.tEvent[tSmartSocketEventList.unEventNum % EVENT_HISTORY_MAX_RECORD_NUM].data = unData;
@@ -232,7 +233,7 @@ SmartSocketEvent_t DAT_nGetEventHistory(uint8_t unEventSelecter)	// unEventSelec
 		return tEvent;
 	}
 	unEventIndex = (tSmartSocketEventList.unEventNum - 1) % EVENT_HISTORY_MAX_RECORD_NUM;
-    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)10) == pdTRUE ){
+    if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
     	tEvent = tSmartSocketEventList.tEvent[(unEventIndex >= unEventSelecter)?
     			(unEventIndex - unEventSelecter) : (EVENT_HISTORY_MAX_RECORD_NUM - (unEventSelecter - unEventIndex))];
         xSemaphoreGive(xSmartSocketEventListSemaphore);

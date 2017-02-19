@@ -409,7 +409,7 @@ manual_enable_set(const char *pValue)
 		tSmartSocketParameter.tConfigure.bButtonRelayEnable = pJsonSub_enable->valueint;
 		cJSON_Delete(pJson);
 
-		if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+		if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
 			system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 								&tSmartSocketParameter, sizeof(tSmartSocketParameter));
 			xSemaphoreGive(xSmartSocketParameterSemaphore);
@@ -869,7 +869,7 @@ current_threshold_set(const char* pValue)
     tSmartSocketParameter.fCurrentThreshold = pJsonSub->valuedouble;
 
     cJSON_Delete(pJson);
-	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE){
+	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE){
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
 		xSemaphoreGive(xSmartSocketParameterSemaphore);
@@ -968,7 +968,7 @@ sntp_set(const char* pValue)
         }
 
     	cJSON_Delete(pJson);
-    	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+    	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
     		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
     							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
     		xSemaphoreGive(xSmartSocketParameterSemaphore);
@@ -987,7 +987,7 @@ sntp_set(const char* pValue)
     	}else{
         	tSmartSocketParameter.tConfigure.bSNTPEnable = pJsonSub->valueint;
         	cJSON_Delete(pJson);
-        	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)10) == pdTRUE ){
+        	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
         		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
         							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
         		xSemaphoreGive(xSmartSocketParameterSemaphore);
