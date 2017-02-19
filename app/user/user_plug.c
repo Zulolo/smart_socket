@@ -383,7 +383,7 @@ void relayInit(void)
 void  
 user_plug_init(void)
 {
-	uint32_t unStartUpKeyPressCNT;
+//	uint32_t unStartUpKeyPressCNT;
     printf("user_plug_init start!\n");
 
     user_link_led_init();
@@ -394,14 +394,14 @@ user_plug_init(void)
     user_key[0] = key_init_single(PLUG_USR_KEY_PIN_NUM, PLUG_USR_KEY_IO_MUX, PLUG_USR_KEY_IO_FUNC,
                                     user_plug_long_press, user_plug_short_press);
 
-    unStartUpKeyPressCNT = 0;
-    while ((1 == GPIO_INPUT_GET(GPIO_ID_PIN(PLUG_USR_KEY_PIN_NUM))) && (unStartUpKeyPressCNT < 10)){
-    	unStartUpKeyPressCNT++;
-    	vTaskDelay(10/portTICK_RATE_MS);
-    }
-    if (10 == unStartUpKeyPressCNT){
-    	tSmartSocketParameter.tCS5463Calib.unValidation = 0;
-    }
+//    unStartUpKeyPressCNT = 0;
+//    while ((1 == GPIO_INPUT_GET(GPIO_ID_PIN(PLUG_USR_KEY_PIN_NUM))) && (unStartUpKeyPressCNT < 10)){
+//    	unStartUpKeyPressCNT++;
+//    	vTaskDelay(10/portTICK_RATE_MS);
+//    }
+//    if (10 == unStartUpKeyPressCNT){
+//    	tSmartSocketParameter.tCS5463Calib.unValidation = 0;
+//    }
 
     keys.key_num = PLUG_USER_KEY_NUM;
     keys.key_list = user_key;
