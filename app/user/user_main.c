@@ -83,6 +83,7 @@ HttpdBuiltInUrl builtInUrls[]={
 
 extern xSemaphoreHandle xSmartSocketEventListSemaphore;
 extern xSemaphoreHandle xSmartSocketParameterSemaphore;
+extern xSemaphoreHandle xSmartSocketCaliSemaphore;
 extern SmartSocketEventList_t tSmartSocketEventList;
 extern SmartSocketParameter_t tSmartSocketParameter;
 /******************************************************************************
