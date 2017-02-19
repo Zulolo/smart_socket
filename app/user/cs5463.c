@@ -28,15 +28,18 @@
 #define CS5463_RD_REG_CMD		0x00
 #define CS5463_WR_REG_CMD		0x40
 
+#define CS5463_STATUS_BIT_DATA_READY	23
+
 static int8_t fCS5463_T;
-static float fCS5463_IRMS;
+static uint32_t unCS5463_IRMS;
 static uint32_t unCS5463_Status;
-static float fCS5463_VRMS;
-static float fCS5463_P;
+static uint32_t unCS5463_VRMS;
+static uint32_t unCS5463_P;
 
 //FLASH_SECTOR_SIZE
 extern SmartSocketParameter_t tSmartSocketParameter;
 extern xSemaphoreHandle xSmartSocketCaliSemaphore;
+extern xSemaphoreHandle xSmartSocketParameterSemaphore;
 
 typedef enum{
 	CS5463_CALI_STATE_STOP = 0,	// Stop
@@ -50,7 +53,16 @@ typedef enum{
 	CS5463_CALI_STATE_RESET
 }CS5463CaliState_t;
 
-int32_t CS5463IF_Cali(void)
+bool getCS5463RegBit(uint8_t* pPara, uint8_t unBitIndex)
+{
+	if (((pPara[unBitIndex/8] >> (unBitIndex%8)) & 0x01) == 0x01){
+		return true;
+	}else {
+		return false;
+	}
+}
+
+int32_t CS5463IF_Calib(void)
 {
 	CS5463CaliState_t tCaliState;
 	uint8_t unPara[3];
@@ -59,6 +71,12 @@ int32_t CS5463IF_Cali(void)
 //	memset(&(tSmartSocketParameter.tCS5463Valid), 0, sizeof(tSmartSocketParameter.tCS5463Valid));
 	user_plug_set_status(PLUG_STATUS_CLOSE);
 	user_relay_led_output(LED_1HZ);
+
+	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 0);
+	vTaskDelay(200/portTICK_RATE_MS);
+	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 1);
+	vTaskDelay(200/portTICK_RATE_MS);
+
 	xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(1000/portTICK_RATE_MS));
 	while ((true == tSmartSocketParameter.tConfigure.bCS5463Cali) &&
 			(tCaliState != CS5463_CALI_STATE_STOP)){
@@ -82,75 +100,185 @@ int32_t CS5463IF_Cali(void)
 			unPara[0] = 0;
 			unPara[1] = 0;
 			unPara[2] = 0;
-			CS5463IF_WriteReg(CS5463_CMD_WR_STATUS, unPara, sizeof(unPara));
-
-			user_relay_led_output(LED_1HZ);
-			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
-				tCaliState = CS5463_CALI_STATE_AC_V_OFFSET;
+			CS5463IF_WriteReg(CS5463_CMD_WR_DC_V_OFFSET, unPara, sizeof(unPara));
+			CS5463IF_WriteCmd(CS5463_CMD_START_DC_V_OFFSET_CALIB);
+			vTaskDelay(30/portTICK_RATE_MS);
+			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+				CS5463IF_Read(CS5463_CMD_RD_DC_V_OFFSET, unPara, sizeof(unPara));
+				tSmartSocketParameter.tCS5463Calib.unDC_V_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				user_relay_led_output(LED_1HZ);
+				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+					tCaliState = CS5463_CALI_STATE_AC_V_OFFSET;
+				}else{
+					printf("CS5463 calibration AC voltage offset timeout, exit...\n");
+					tCaliState = CS5463_CALI_STATE_STOP;
+			    }
 			}else{
-				printf("CS5463 calibration AC voltage offset timeout, exit...\n");
 				tCaliState = CS5463_CALI_STATE_STOP;
-		    }
+			}
+
 			break;
 
 		case CS5463_CALI_STATE_AC_V_OFFSET:
 			user_relay_led_output(LED_5HZ);
 
-			user_relay_led_output(LED_1HZ);
-			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
-				tCaliState = CS5463_CALI_STATE_AC_V_GAIN;
+			CS5463IF_WriteCmd(CS5463_CMD_SW_RESET);
+			vTaskDelay(10/portTICK_RATE_MS);
+			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
+			vTaskDelay(20/portTICK_RATE_MS);
+
+			unPara[0] = 0;
+			unPara[1] = 0;
+			unPara[2] = 0;
+			CS5463IF_WriteReg(CS5463_CMD_WR_AC_V_OFFSET, unPara, sizeof(unPara));
+			CS5463IF_WriteCmd(CS5463_CMD_START_AC_V_OFFSET_CALIB);
+			vTaskDelay(30/portTICK_RATE_MS);
+			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+				CS5463IF_Read(CS5463_CMD_RD_AC_V_OFFSET, unPara, sizeof(unPara));
+				tSmartSocketParameter.tCS5463Calib.unAC_V_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				user_relay_led_output(LED_1HZ);
+				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+					tCaliState = CS5463_CALI_STATE_AC_V_GAIN;
+				}else{
+					printf("CS5463 calibration AC voltage gain timeout, exit...\n");
+					tCaliState = CS5463_CALI_STATE_STOP;
+			    }
 			}else{
-				printf("CS5463 calibration AC voltage gain timeout, exit...\n");
 				tCaliState = CS5463_CALI_STATE_STOP;
-		    }
+			}
+
 			break;
 
 		case CS5463_CALI_STATE_AC_V_GAIN:
 			user_relay_led_output(LED_5HZ);
 
-			user_relay_led_output(LED_1HZ);
-			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
-				tCaliState = CS5463_CALI_STATE_DC_I_OFFSET;
+			CS5463IF_WriteCmd(CS5463_CMD_SW_RESET);
+			vTaskDelay(10/portTICK_RATE_MS);
+			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
+			vTaskDelay(20/portTICK_RATE_MS);
+
+			unPara[0] = 0;
+			unPara[1] = 0;
+			unPara[2] = 0;
+			CS5463IF_WriteReg(CS5463_CMD_WR_V_GAIN, unPara, sizeof(unPara));
+			CS5463IF_WriteCmd(CS5463_CMD_START_AC_V_GAIN_CALIB);
+			vTaskDelay(30/portTICK_RATE_MS);
+			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+				CS5463IF_Read(CS5463_CMD_RD_V_GAIN, unPara, sizeof(unPara));
+				tSmartSocketParameter.tCS5463Calib.unV_Gain = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				user_relay_led_output(LED_1HZ);
+				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+					tCaliState = CS5463_CALI_STATE_DC_I_OFFSET;
+				}else{
+					printf("CS5463 calibration DC current offset timeout, exit...\n");
+					tCaliState = CS5463_CALI_STATE_STOP;
+			    }
 			}else{
-				printf("CS5463 calibration DC current offset timeout, exit...\n");
 				tCaliState = CS5463_CALI_STATE_STOP;
-		    }
+			}
+
 			break;
 
 		case CS5463_CALI_STATE_DC_I_OFFSET:
 			user_relay_led_output(LED_5HZ);
 
-			user_relay_led_output(LED_1HZ);
-			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
-				tCaliState = CS5463_CALI_STATE_AC_I_OFFSET;
+			CS5463IF_WriteCmd(CS5463_CMD_SW_RESET);
+			vTaskDelay(10/portTICK_RATE_MS);
+			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
+			vTaskDelay(20/portTICK_RATE_MS);
+
+			unPara[0] = 0;
+			unPara[1] = 0;
+			unPara[2] = 0;
+			CS5463IF_WriteReg(CS5463_CMD_WR_DC_I_OFFSET, unPara, sizeof(unPara));
+			CS5463IF_WriteCmd(CS5463_CMD_START_DC_I_OFFSET_CALIB);
+			vTaskDelay(30/portTICK_RATE_MS);
+			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+				CS5463IF_Read(CS5463_CMD_RD_DC_I_OFFSET, unPara, sizeof(unPara));
+				tSmartSocketParameter.tCS5463Calib.unDC_I_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				user_relay_led_output(LED_1HZ);
+				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+					tCaliState = CS5463_CALI_STATE_AC_I_OFFSET;
+				}else{
+					printf("CS5463 calibration AC current offset timeout, exit...\n");
+					tCaliState = CS5463_CALI_STATE_STOP;
+			    }
 			}else{
-				printf("CS5463 calibration AC current offset timeout, exit...\n");
 				tCaliState = CS5463_CALI_STATE_STOP;
-		    }
+			}
+
 			break;
 
 		case CS5463_CALI_STATE_AC_I_OFFSET:
 			user_relay_led_output(LED_5HZ);
 
-			user_relay_led_output(LED_1HZ);
-			if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
-				tCaliState = CS5463_CALI_STATE_AC_I_GAIN;
+			CS5463IF_WriteCmd(CS5463_CMD_SW_RESET);
+			vTaskDelay(10/portTICK_RATE_MS);
+			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
+			vTaskDelay(20/portTICK_RATE_MS);
+
+			unPara[0] = 0;
+			unPara[1] = 0;
+			unPara[2] = 0;
+			CS5463IF_WriteReg(CS5463_CMD_WR_AC_I_OFFSET, unPara, sizeof(unPara));
+			CS5463IF_WriteCmd(CS5463_CMD_START_AC_I_OFFSET_CALIB);
+			vTaskDelay(30/portTICK_RATE_MS);
+			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+				CS5463IF_Read(CS5463_CMD_RD_AC_I_OFFSET, unPara, sizeof(unPara));
+				tSmartSocketParameter.tCS5463Calib.unAC_I_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				user_relay_led_output(LED_1HZ);
+				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(60000/portTICK_RATE_MS)) == pdTRUE ){
+					tCaliState = CS5463_CALI_STATE_AC_I_GAIN;
+				}else{
+					printf("CS5463 calibration AC current gain timeout, exit...\n");
+					tCaliState = CS5463_CALI_STATE_STOP;
+			    }
 			}else{
-				printf("CS5463 calibration AC current gain timeout, exit...\n");
 				tCaliState = CS5463_CALI_STATE_STOP;
-		    }
+			}
+
 			break;
 
 		case CS5463_CALI_STATE_AC_I_GAIN:
 			user_relay_led_output(LED_5HZ);
 
-			user_relay_led_output(LED_1HZ);
-			tCaliState = CS5463_CALI_STATE_RESET;
+			CS5463IF_WriteCmd(CS5463_CMD_SW_RESET);
+			vTaskDelay(10/portTICK_RATE_MS);
+			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
+			vTaskDelay(20/portTICK_RATE_MS);
+
+			unPara[0] = 0;
+			unPara[1] = 0;
+			unPara[2] = 0;
+			CS5463IF_WriteReg(CS5463_CMD_WR_I_GAIN, unPara, sizeof(unPara));
+			CS5463IF_WriteCmd(CS5463_CMD_START_AC_I_GAIN_CALIB);
+			vTaskDelay(30/portTICK_RATE_MS);
+			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+				CS5463IF_Read(CS5463_CMD_RD_I_GAIN, unPara, sizeof(unPara));
+				tSmartSocketParameter.tCS5463Calib.unI_Gain = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				user_relay_led_output(LED_1HZ);
+				tCaliState = CS5463_CALI_STATE_RESET;
+			}else{
+				tCaliState = CS5463_CALI_STATE_STOP;
+			}
+
 			break;
 
 		case CS5463_CALI_STATE_RESET:
-
-			user_relay_led_output(LED_OFF);
+			tSmartSocketParameter.tCS5463Calib.unValidation = 0xA5A5A5A5;
+			if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE){
+				system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+									&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+				xSemaphoreGive(xSmartSocketParameterSemaphore);
+			}else{
+				printf("Take parameter semaphore failed.\n");
+			}
 			tCaliState = CS5463_CALI_STATE_STOP;
 			break;
 
@@ -161,6 +289,8 @@ int32_t CS5463IF_Cali(void)
 		}
 	}
 	tSmartSocketParameter.tConfigure.bCS5463Cali = false;
+	user_plug_set_status(PLUG_STATUS_OPEN);
+	user_relay_led_output(LED_OFF);
 	return 0;
 }
 
@@ -289,9 +419,9 @@ trend_record_callback(void *arg)
 {
 	TrendContent_t tValue;
 	tValue.fTemperature = fCS5463_T;
-	tValue.fCurrent = fCS5463_IRMS;
-	tValue.fVoltage = fCS5463_VRMS;
-	tValue.fPower = fCS5463_P;
+	tValue.fCurrent = unCS5463_IRMS;
+	tValue.fVoltage = unCS5463_VRMS;
+	tValue.fPower = unCS5463_P;
 	tValue.unTime = sntp_get_current_timestamp();
     DAT_bTrendRecordAdd(tValue);
 }
@@ -333,16 +463,19 @@ void initCS5463(void)
 
 }
 
-void CS5463_Manager(void *pvParameters)
+void CS5463IF_Routine(void)
 {
-	uint8_t unCS5463ReadData[3];	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
-
-	CS5463IF_Init();
+	uint8_t unCS5463Data[3];	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
 
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 0);
-	vTaskDelay(500/portTICK_RATE_MS);
+	vTaskDelay(200/portTICK_RATE_MS);
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 1);
-	vTaskDelay(500/portTICK_RATE_MS);
+	vTaskDelay(200/portTICK_RATE_MS);
+
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_0);
 
 	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 
@@ -352,30 +485,44 @@ void CS5463_Manager(void *pvParameters)
 
 	while(1){
 		// Temperature
-		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_T = (int8_t)(unCS5463ReadData[0]);
-		fCS5463_P = 15 + ((float)(unCS5463ReadData[1] % 100))/100;
+		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463Data, sizeof(unCS5463Data));
+		fCS5463_T = (int8_t)(unCS5463Data[0]);
+//		unCS5463_P = 15 + ((float)(unCS5463ReadData[1] % 100))/100;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Current
-		CS5463IF_Read(CS5463_CMD_RD_IRMS, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_IRMS = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2])/0xFFFFFF; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
+		CS5463IF_Read(CS5463_CMD_RD_IRMS, unCS5463Data, sizeof(unCS5463Data));
+		unCS5463_IRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2]; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Voltage
-		CS5463IF_Read(CS5463_CMD_RD_VRMS, unCS5463ReadData, sizeof(unCS5463ReadData));
-		fCS5463_VRMS = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2])/0xFFFFFF; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
+		CS5463IF_Read(CS5463_CMD_RD_VRMS, unCS5463Data, sizeof(unCS5463Data));
+		unCS5463_VRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2]; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Status
-		CS5463IF_Read(CS5463_CMD_RD_STATUS, unCS5463ReadData, sizeof(unCS5463ReadData));
-		unCS5463_Status = ((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		CS5463IF_Read(CS5463_CMD_RD_STATUS, unCS5463Data, sizeof(unCS5463Data));
+		unCS5463_Status = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Power
-//		CS5463IF_Read(CS5463_CMD_RD_P, unCS5463ReadData, sizeof(unCS5463ReadData));
-//		fCS5463_P = *((int16_t*)(unCS5463ReadData))/MAX_SIGNED_INT_16_VALUE;	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		CS5463IF_Read(CS5463_CMD_RD_P, unCS5463Data, sizeof(unCS5463Data));
+		unCS5463_P = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
+	}
+	os_timer_disarm(&tTrendRecord);
+}
+
+void CS5463_Manager(void *pvParameters)
+{
+	CS5463IF_Init();
+
+	while(1){
+		if (tSmartSocketParameter.tCS5463Calib.unValidation != 0xA5A5A5A5){
+			CS5463IF_Calib();
+		}else{
+			CS5463IF_Routine();
+		}
 	}
 }
 	//
@@ -384,19 +531,19 @@ uint32_t CS5463_unGetStatus(void)
 	return unCS5463_Status;
 }
 
-float CS5463_fGetCurrent(void)
+uint32_t CS5463_unGetCurrent(void)
 {
-	return fCS5463_IRMS;
+	return unCS5463_IRMS;
 }
 
-float CS5463_fGetVoltage(void)
+uint32_t CS5463_unGetVoltage(void)
 {
-	return fCS5463_VRMS;
+	return unCS5463_VRMS;
 }
 
-float CS5463_fGetPower(void)
+uint32_t CS5463_unGetPower(void)
 {
-	return fCS5463_P;
+	return unCS5463_P;
 }
 
 float CS5463_fGetTemperature(void)

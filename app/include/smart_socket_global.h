@@ -105,17 +105,15 @@ typedef struct timer_bkup_param{
 //    char pad;
 }TimerBkup_para_t;
 
-typedef struct CS5463_valid_para{
+typedef struct CS5463_calib_para{
 	uint32 unValidation;
 	uint32 unAC_V_Offset;
-	uint32 unAC_V_Gain;
 	uint32 unDC_V_Offset;
-	uint32 unDC_V_Gain;
 	uint32 unAC_I_Offset;
-	uint32 unAC_I_Gain;
 	uint32 unDC_I_Offset;
-	uint32 unDC_I_Gain;
-}CS5463Valid_para_t;
+	uint32 unV_Gain;
+	uint32 unI_Gain;
+}CS5463Calib_para_t;
 
 typedef struct SmartSocketParameter{
 	struct
@@ -144,7 +142,7 @@ typedef struct SmartSocketParameter{
 	uint32 unValidation;	//TODO: use CRC of tEvent array data
 	TimerBkup_para_t tTimerBkupParam;
 	char sTimerSplitsString[TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN];
-	CS5463Valid_para_t tCS5463Valid;
+	CS5463Calib_para_t tCS5463Calib;
 }SmartSocketParameter_t;
 
 typedef struct TrendContent{
