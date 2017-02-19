@@ -184,12 +184,15 @@ void user_init(void)
 
     systemInit();
 
-    cs5463Task();
-
     /*Initialization of the peripheral drivers*/
     /*For light demo , it is user_light_init();*/
     /* Also check whether assigned ip addr by the router.If so, connect to ESP-server  */
     user_esp_platform_init();
+
+    // cs5463Task() need to be put after user_esp_platform_init() because
+    // cs5463Task() may need to control relay in calibration process and
+    // user_esp_platform_init() will initial relay control
+    cs5463Task();
 
     /*Establish a udp socket to receive local device detect info.*/
     /*Listen to the port 1025, as well as udp broadcast.

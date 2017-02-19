@@ -393,6 +393,10 @@ user_plug_init(void)
     user_key[0] = key_init_single(PLUG_USR_KEY_PIN_NUM, PLUG_USR_KEY_IO_MUX, PLUG_USR_KEY_IO_FUNC,
                                     user_plug_long_press, user_plug_short_press);
 
+    while ((1 == GPIO_INPUT_GET(GPIO_ID_PIN(PLUG_USR_KEY_PIN_NUM))) && ()){
+
+    }
+
     keys.key_num = PLUG_USER_KEY_NUM;
     keys.key_list = user_key;
 

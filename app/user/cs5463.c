@@ -436,9 +436,9 @@ void initCS5463(void)
 //
 	uint8_t unPara[3];
 
-	unPara[0] = 0xFF;
-	unPara[1] = 0xFF;
-	unPara[2] = 0xFF;
+	unPara[0] = 0x80;
+	unPara[1] = 0;
+	unPara[2] = 0;
 	CS5463IF_WriteReg(CS5463_CMD_WR_STATUS, unPara, sizeof(unPara));
 
 	unPara[0] = 0;
@@ -447,8 +447,8 @@ void initCS5463(void)
 	CS5463IF_WriteReg(CS5463_CMD_WR_CONFIG, unPara, sizeof(unPara));
 
 	unPara[0] = 0;
-	unPara[1] = 0x0F;
-	unPara[2] = 0xA0;
+	unPara[1] = 0x03;
+	unPara[2] = 0x20;
 	CS5463IF_WriteReg(CS5463_CMD_WR_CYCLE_COUNT, unPara, sizeof(unPara));
 
 	unPara[0] = 0;
@@ -456,11 +456,49 @@ void initCS5463(void)
 	unPara[2] = 0;
 	CS5463IF_WriteReg(CS5463_CMD_WR_MASK, unPara, sizeof(unPara));
 
-	unPara[0] = 0x80;
+	unPara[0] = 0;
 	unPara[1] = 0;
 	unPara[2] = 0x01;
 	CS5463IF_WriteReg(CS5463_CMD_WR_MODE, unPara, sizeof(unPara));
+	CS5463IF_Read(CS5463_CMD_RD_MODE, unPara, sizeof(unPara));
 
+	unPara[0] = 0;
+	unPara[1] = 0;
+	unPara[2] = 0;
+	CS5463IF_WriteReg(CS5463_CMD_WR_CTRL, unPara, sizeof(unPara));
+
+	CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+	CS5463IF_WriteReg(CS5463_CMD_WR_STATUS, unPara, sizeof(unPara));
+
+	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unDC_V_Offset >> 16) & 0xFF;
+	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unDC_V_Offset >> 8) & 0xFF;
+	unPara[2] = tSmartSocketParameter.tCS5463Calib.unDC_V_Offset & 0xFF;
+	CS5463IF_WriteReg(CS5463_CMD_WR_DC_V_OFFSET, unPara, sizeof(unPara));
+
+	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unV_Gain >> 16) & 0xFF;
+	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unV_Gain >> 8) & 0xFF;
+	unPara[2] = tSmartSocketParameter.tCS5463Calib.unV_Gain & 0xFF;
+	CS5463IF_WriteReg(CS5463_CMD_WR_V_GAIN, unPara, sizeof(unPara));
+
+	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unAC_V_Offset >> 16) & 0xFF;
+	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unAC_V_Offset >> 8) & 0xFF;
+	unPara[2] = tSmartSocketParameter.tCS5463Calib.unAC_V_Offset & 0xFF;
+	CS5463IF_WriteReg(CS5463_CMD_WR_AC_V_OFFSET, unPara, sizeof(unPara));
+
+	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unDC_I_Offset >> 16) & 0xFF;
+	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unDC_I_Offset >> 8) & 0xFF;
+	unPara[2] = tSmartSocketParameter.tCS5463Calib.unDC_I_Offset & 0xFF;
+	CS5463IF_WriteReg(CS5463_CMD_WR_DC_I_OFFSET, unPara, sizeof(unPara));
+
+	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unI_Gain >> 16) & 0xFF;
+	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unI_Gain >> 8) & 0xFF;
+	unPara[2] = tSmartSocketParameter.tCS5463Calib.unI_Gain & 0xFF;
+	CS5463IF_WriteReg(CS5463_CMD_WR_I_GAIN, unPara, sizeof(unPara));
+
+	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unAC_I_Offset >> 16) & 0xFF;
+	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unAC_I_Offset >> 8) & 0xFF;
+	unPara[2] = tSmartSocketParameter.tCS5463Calib.unAC_I_Offset & 0xFF;
+	CS5463IF_WriteReg(CS5463_CMD_WR_AC_I_OFFSET, unPara, sizeof(unPara));
 }
 
 void CS5463IF_Routine(void)
@@ -476,7 +514,7 @@ void CS5463IF_Routine(void)
 	writeCS5463SPI(CS5463_CMD_SYNC_1);
 	writeCS5463SPI(CS5463_CMD_SYNC_1);
 	writeCS5463SPI(CS5463_CMD_SYNC_0);
-
+	initCS5463();
 	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 
     os_timer_disarm(&tTrendRecord);
