@@ -272,6 +272,22 @@ bool getCS5463RegBit(uint8_t* pPara, uint8_t unBitIndex)
 	}
 }
 
+bool waitDataReady(uint32_t unWaitTime)
+{
+	uint8_t unPara[3];
+	uint32_t unWaitCNT = unWaitTime/100;
+
+	while(unWaitCNT--){
+		CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
+		if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+			printf("%u ms was spent to get data ready.\n", unWaitTime - unWaitCNT * 100);
+			return true;
+		}
+		vTaskDelay(100/portTICK_RATE_MS);
+	}
+	return false;
+}
+
 int32_t CS5463IF_Calib(void)
 {
 	CS5463CaliState_t tCaliState;
@@ -280,7 +296,7 @@ int32_t CS5463IF_Calib(void)
 	tSmartSocketParameter.tConfigure.bCS5463Cali = true;
 
 //	memset(&(tSmartSocketParameter.tCS5463Valid), 0, sizeof(tSmartSocketParameter.tCS5463Valid));
-	user_plug_set_status(PLUG_STATUS_CLOSE);
+	user_plug_set_status(PLUG_STATUS_OPEN);
 	user_relay_led_output(LED_1HZ);
 
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 0);
@@ -314,9 +330,7 @@ int32_t CS5463IF_Calib(void)
 			unPara[2] = 0;
 			CS5463IF_WriteReg(CS5463_CMD_WR_DC_V_OFFSET, unPara, sizeof(unPara));
 			CS5463IF_WriteCmd(CS5463_CMD_START_DC_V_OFFSET_CALIB);
-			vTaskDelay(CS5463_DELAY_AFTER_CALIB_CMD/portTICK_RATE_MS);
-			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
-			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_DC_V_OFFSET, unPara, sizeof(unPara));
 				tSmartSocketParameter.tCS5463Calib.unDC_V_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
 				user_relay_led_output(LED_1HZ);
@@ -350,9 +364,7 @@ int32_t CS5463IF_Calib(void)
 			unPara[2] = 0;
 			CS5463IF_WriteReg(CS5463_CMD_WR_AC_V_OFFSET, unPara, sizeof(unPara));
 			CS5463IF_WriteCmd(CS5463_CMD_START_AC_V_OFFSET_CALIB);
-			vTaskDelay(CS5463_DELAY_AFTER_CALIB_CMD/portTICK_RATE_MS);
-			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
-			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_AC_V_OFFSET, unPara, sizeof(unPara));
 				tSmartSocketParameter.tCS5463Calib.unAC_V_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
 				user_relay_led_output(LED_1HZ);
@@ -381,14 +393,14 @@ int32_t CS5463IF_Calib(void)
 			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
 			vTaskDelay(20/portTICK_RATE_MS);
 
-			unPara[0] = 0;
+			user_plug_set_status(PLUG_STATUS_CLOSE);
+			unPara[0] = 0x40;
 			unPara[1] = 0;
 			unPara[2] = 0;
 			CS5463IF_WriteReg(CS5463_CMD_WR_V_GAIN, unPara, sizeof(unPara));
 			CS5463IF_WriteCmd(CS5463_CMD_START_AC_V_GAIN_CALIB);
-			vTaskDelay(CS5463_DELAY_AFTER_CALIB_CMD/portTICK_RATE_MS);
-			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
-			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
+				user_plug_set_status(PLUG_STATUS_OPEN);
 				CS5463IF_Read(CS5463_CMD_RD_V_GAIN, unPara, sizeof(unPara));
 				tSmartSocketParameter.tCS5463Calib.unV_Gain = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
 				user_relay_led_output(LED_1HZ);
@@ -402,6 +414,7 @@ int32_t CS5463IF_Calib(void)
 					tCaliState = CS5463_CALI_STATE_STOP;
 			    }
 			}else{
+				user_plug_set_status(PLUG_STATUS_OPEN);
 				printf("CS5463 status register read: 0x%02X, 0x%02X, 0x%02X\n", unPara[0], unPara[1], unPara[2]);
 				printf("Calibration failed, data ready timeout.\n");
 				tCaliState = CS5463_CALI_STATE_STOP;
@@ -417,14 +430,12 @@ int32_t CS5463IF_Calib(void)
 			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
 			vTaskDelay(20/portTICK_RATE_MS);
 
-			unPara[0] = 0;
+			unPara[0] = 0x40;
 			unPara[1] = 0;
 			unPara[2] = 0;
 			CS5463IF_WriteReg(CS5463_CMD_WR_DC_I_OFFSET, unPara, sizeof(unPara));
 			CS5463IF_WriteCmd(CS5463_CMD_START_DC_I_OFFSET_CALIB);
-			vTaskDelay(CS5463_DELAY_AFTER_CALIB_CMD/portTICK_RATE_MS);
-			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
-			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_DC_I_OFFSET, unPara, sizeof(unPara));
 				tSmartSocketParameter.tCS5463Calib.unDC_I_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
 				user_relay_led_output(LED_1HZ);
@@ -458,9 +469,7 @@ int32_t CS5463IF_Calib(void)
 			unPara[2] = 0;
 			CS5463IF_WriteReg(CS5463_CMD_WR_AC_I_OFFSET, unPara, sizeof(unPara));
 			CS5463IF_WriteCmd(CS5463_CMD_START_AC_I_OFFSET_CALIB);
-			vTaskDelay(CS5463_DELAY_AFTER_CALIB_CMD/portTICK_RATE_MS);
-			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
-			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_AC_I_OFFSET, unPara, sizeof(unPara));
 				tSmartSocketParameter.tCS5463Calib.unAC_I_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
 				user_relay_led_output(LED_1HZ);
@@ -489,14 +498,14 @@ int32_t CS5463IF_Calib(void)
 			CS5463IF_WriteCmd(CS5463_CMD_POWER_UP_HALT);
 			vTaskDelay(20/portTICK_RATE_MS);
 
-			unPara[0] = 0;
+			user_plug_set_status(PLUG_STATUS_CLOSE);
+			unPara[0] = 0x40;
 			unPara[1] = 0;
 			unPara[2] = 0;
 			CS5463IF_WriteReg(CS5463_CMD_WR_I_GAIN, unPara, sizeof(unPara));
 			CS5463IF_WriteCmd(CS5463_CMD_START_AC_I_GAIN_CALIB);
-			vTaskDelay(CS5463_DELAY_AFTER_CALIB_CMD/portTICK_RATE_MS);
-			CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
-			if (getCS5463RegBit(unPara, CS5463_STATUS_BIT_DATA_READY) == true){
+			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
+				user_plug_set_status(PLUG_STATUS_OPEN);
 				CS5463IF_Read(CS5463_CMD_RD_I_GAIN, unPara, sizeof(unPara));
 				tSmartSocketParameter.tCS5463Calib.unI_Gain = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
 				user_relay_led_output(LED_1HZ);
@@ -504,6 +513,7 @@ int32_t CS5463IF_Calib(void)
 				printf("AC current gain is 0x%06X.\n", tSmartSocketParameter.tCS5463Calib.unI_Gain);
 				tCaliState = CS5463_CALI_STATE_RESET;
 			}else{
+				user_plug_set_status(PLUG_STATUS_OPEN);
 				printf("CS5463 status register read: 0x%02X, 0x%02X, 0x%02X\n", unPara[0], unPara[1], unPara[2]);
 				printf("Calibration failed, data ready timeout.\n");
 				tCaliState = CS5463_CALI_STATE_STOP;
