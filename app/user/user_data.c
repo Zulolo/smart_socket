@@ -31,6 +31,8 @@ int32_t DAT_nFlashDataClean(void)
 	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE){
 		memset(&tSmartSocketParameter, 0, sizeof(tSmartSocketParameter));
 		tSmartSocketParameter.unValidation = 0xA5A5A5A5;
+		tSmartSocketParameter.tCS5463Calib.fI_Max = 10;
+		tSmartSocketParameter.tCS5463Calib.fV_Max = 250;
 		tSmartSocketParameter.tConfigure.bButtonRelayEnable = 1;
 		tSmartSocketParameter.tConfigure.bSNTPEnable = 1;
 //		tSmartSocketParameter.tConfigure.bRelayScheduleEnable = 0;

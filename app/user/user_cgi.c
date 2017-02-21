@@ -167,7 +167,7 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_unGetCurrent());
+    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_fGetI_RMS());
     cJSON_AddStringToObject(pSubJson_response, "unit", "A");
     return 0;
 }
@@ -193,7 +193,7 @@ voltage_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "voltage", CS5463_unGetVoltage());
+    cJSON_AddNumberToObject(pSubJson_response, "voltage", CS5463_fGetV_RMS());
     cJSON_AddStringToObject(pSubJson_response, "unit", "V");
     return 0;
 }
@@ -219,14 +219,14 @@ power_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "power", CS5463_unGetPower());
+    cJSON_AddNumberToObject(pSubJson_response, "power", CS5463_fGetActivePower());
     cJSON_AddStringToObject(pSubJson_response, "unit", "W");
     return 0;
 }
 
 /******************************************************************************
- * FunctionName : temperature_value_get
- * Description  : set up temperature value as a JSON format
+ * FunctionName : cs5463_calib_get
+ * Description  : set up calibration information as a JSON format
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
@@ -235,7 +235,9 @@ power_value_get(cJSON *pcjson, const char* pname )
 "AC_I_Offset":24,
 "DC_I_Offset":24,
 "V_Gain":24,
-"I_Gain":24}}
+"I_Gain":24,
+"I_Max":10,
+"V_Max":250}}
 *******************************************************************************/
 LOCAL int
 cs5463_calib_get(cJSON *pcjson, const char* pname )
@@ -254,7 +256,69 @@ cs5463_calib_get(cJSON *pcjson, const char* pname )
     cJSON_AddNumberToObject(pSubJson_response, "DC_I_Offset", tSmartSocketParameter.tCS5463Calib.unDC_I_Offset);
     cJSON_AddNumberToObject(pSubJson_response, "V_Gain", tSmartSocketParameter.tCS5463Calib.unV_Gain);
     cJSON_AddNumberToObject(pSubJson_response, "I_Gain", tSmartSocketParameter.tCS5463Calib.unI_Gain);
+    cJSON_AddNumberToObject(pSubJson_response, "I_Max", tSmartSocketParameter.tCS5463Calib.fI_Max);
+    cJSON_AddNumberToObject(pSubJson_response, "V_Max", tSmartSocketParameter.tCS5463Calib.fV_Max);
     return 0;
+}
+
+/******************************************************************************
+ * FunctionName : cs5463_calib_set
+ * Description  :get calibration information from JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"set":{
+"I_Max":10,
+"V_Max":250}}
+*******************************************************************************/
+LOCAL int
+cs5463_calib_set(const char *pValue)
+{
+    cJSON * pJsonSub=NULL;
+    cJSON * pJsonSubValue=NULL;
+    cJSON * pJson =  cJSON_Parse(pValue);
+
+    if(NULL != pJson){
+        pJsonSub = cJSON_GetObjectItem(pJson, "set");
+    }else{
+    	return (-1);
+    }
+
+    if(NULL != pJsonSub){
+    	pJsonSubValue = cJSON_GetObjectItem(pJsonSub, "I_Max");
+        if(NULL != pJsonSubValue){
+            if(pJsonSubValue->type == cJSON_Number){
+            	tSmartSocketParameter.tCS5463Calib.fI_Max = pJsonSubValue->valueint;
+            }
+        }else{
+        	cJSON_Delete(pJson);
+        	return (-1);
+        }
+
+        pJsonSubValue = cJSON_GetObjectItem(pJsonSub, "V_Max");
+		if(NULL != pJsonSubValue){
+			if(pJsonSubValue->type == cJSON_Number){
+				tSmartSocketParameter.tCS5463Calib.fV_Max = pJsonSubValue->valueint;
+			}
+		}else{
+			cJSON_Delete(pJson);
+			return (-1);
+		}
+
+		cJSON_Delete(pJson);
+
+		if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
+			system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+								&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+			xSemaphoreGive(xSmartSocketParameterSemaphore);
+		}else{
+			printf("Take parameter semaphore failed.\n");
+			return (-1);
+		}
+		return 0;
+    }else{
+    	cJSON_Delete(pJson);
+    	return (-1);
+    }
 }
 
 /******************************************************************************
@@ -290,8 +354,8 @@ temperature_value_get(cJSON *pcjson, const char* pname )
  * (http://192.168.1.130/client?command=trend&start_time=2233&end_time=4455)
  * Returns      : result
 {"trend":{"time":145879,
-"type":3,
-"data":1}}
+"I_RMS":3,
+"V_RMS":1}}
 *******************************************************************************/
 LOCAL int
 trend_get(cJSON *pcjson, const char* pname)
@@ -341,12 +405,13 @@ trend_get(cJSON *pcjson, const char* pname)
     	for (unTrendRecordIndex = 0; unTrendRecordIndex < unTrendRecordNum; unTrendRecordIndex++){
     		pSubJsonEvent = cJSON_CreateObject();
 			if(NULL == pSubJsonEvent){
-				printf("pSubJsonEvent creat fail\n");
+				printf("pSubJsonEvent create fail\n");
 				return (-1);
 			}
     		cJSON_AddItemToObject(pcjson, "trend", pSubJsonEvent);
             cJSON_AddNumberToObject(pSubJsonEvent, "time", pTrendContent[unTrendRecordIndex].unTime);
-            cJSON_AddNumberToObject(pSubJsonEvent, "power", pTrendContent[unTrendRecordIndex].fPower);
+            cJSON_AddNumberToObject(pSubJsonEvent, "I_RMS", pTrendContent[unTrendRecordIndex].unI_RMS);
+            cJSON_AddNumberToObject(pSubJsonEvent, "V_RMS", pTrendContent[unTrendRecordIndex].unV_RMS);
     	}
     	free(pTrendContent);
     	return 0;
@@ -530,8 +595,7 @@ LOCAL int
 switch_status_set(const char *pValue)
 {
     cJSON * pJsonSub=NULL;
-    cJSON * pJsonSub_status=NULL;
-    
+    cJSON * pJsonSubStatus=NULL;
     cJSON * pJson =  cJSON_Parse(pValue);
 
     if(NULL != pJson){
@@ -539,12 +603,12 @@ switch_status_set(const char *pValue)
     }
     
     if(NULL != pJsonSub){
-        pJsonSub_status = cJSON_GetObjectItem(pJsonSub, "status");
+    	pJsonSubStatus = cJSON_GetObjectItem(pJsonSub, "status");
     }
     
-    if(NULL != pJsonSub_status){
-        if(pJsonSub_status->type == cJSON_Number){
-            user_plug_set_status(pJsonSub_status->valueint);
+    if(NULL != pJsonSubStatus){
+        if(pJsonSubStatus->type == cJSON_Number){
+            user_plug_set_status(pJsonSubStatus->valueint);
             if(NULL != pJson)cJSON_Delete(pJson);
             return 0;
         }
@@ -1509,7 +1573,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"client", "temperature", temperature_value_get,NULL},
 	{"client", "trend", trend_get,NULL},
 	{"client", "event", event_history_get,NULL},
-	{"client", "calib", cs5463_calib_get,NULL},
+	{"config", "calib", cs5463_calib_get,cs5463_calib_set},
     {"config", "reboot", NULL,user_set_reboot},
     {"config", "wifi", wifi_info_get,wifi_info_set},
 //    {"client", "scan",  scan_info_get, NULL},

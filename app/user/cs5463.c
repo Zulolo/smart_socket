@@ -32,11 +32,11 @@
 #define CS5463_CALIB_WAIT_PRESS_KEY		120000
 #define CS5463_DELAY_AFTER_CALIB_CMD	5000
 
-static int8_t fCS5463_T;
-static uint32_t unCS5463_IRMS;
 static uint32_t unCS5463_Status;
-static uint32_t unCS5463_VRMS;
-static uint32_t unCS5463_P;
+static int8_t fCS5463_T;
+static uint8_t unCS5463_I_RMS[3];
+static uint8_t unCS5463_V_RMS[3];
+static uint8_t unCS5463_P_Active[3];
 
 //FLASH_SECTOR_SIZE
 extern SmartSocketParameter_t tSmartSocketParameter;
@@ -55,6 +55,59 @@ typedef enum{
 	CS5463_CALI_STATE_RESET
 }CS5463CaliState_t;
 
+/******************************************************************************
+ * FunctionName : fConvert24BitToFloat
+ * Description  : convert 24bits data (3 bytes) to unsigned 0~1 floating number
+ * Parameters   : pointer of 3 bytes data
+ * Returns      : float result
+*******************************************************************************/
+float fConvert24BitToFloat(uint8_t* pData)
+{
+	float fResult = 0;
+	uint32_t unTemp = 1;
+	uint8_t i = 0, j = 0;
+
+	for(i = 0; i < 24; i++){
+		if((pData[(uint8_t)(i/8)] << (i%8)) & 0x80){
+			unTemp = 1;
+			for(j = 0; j < i+1; j++){
+				unTemp *= 2;
+			}
+
+			fResult +=  (1/(float)unTemp);
+		}
+	}
+	return fResult ;
+}
+
+/******************************************************************************
+ * FunctionName : fConvert24BitToCmpltFloat
+ * Description  : convert 24bits data (3 bytes) to signed -1~1 complement floating number,
+ * 					High bit is the sign bit
+ * Parameters   : pointer of 3 bytes data
+ * Returns      : float result
+*******************************************************************************/
+float fConvert24BitToCmpltFloat(uint8_t* pData)
+{
+	float fResult = 0;
+	uint32_t unTemp = 1;
+	uint8_t i = 0, j = 0;
+
+	for(i = 1; i < 24; i++){
+		if((pData[(uint8_t)(i/8)] << (i%8)) & 0x80){
+			unTemp = 1;
+			for(j = 0;j<i;j++){
+				unTemp *= 2;
+			}
+			fResult +=  (1/(float)unTemp);
+		}
+	}
+
+	if(pData[0] & 0x80){
+		fResult *= -1;
+	}
+	return fResult ;
+}
 
 void writeCS5463SPI(uint8_t unCmd)
 {
@@ -181,21 +234,15 @@ trend_record_callback(void *arg)
 {
 	TrendContent_t tValue;
 	tValue.fTemperature = fCS5463_T;
-	tValue.fCurrent = unCS5463_IRMS;
-	tValue.fVoltage = unCS5463_VRMS;
-	tValue.fPower = unCS5463_P;
+	tValue.unI_RMS = (unCS5463_I_RMS[0] << 16) | (unCS5463_I_RMS[1] << 8) | unCS5463_I_RMS[2];
+	tValue.unV_RMS = (unCS5463_V_RMS[0] << 16) | (unCS5463_V_RMS[1] << 8) | unCS5463_V_RMS[2];
+//	tValue.unActivePower = unCS5463_P;
 	tValue.unTime = sntp_get_current_timestamp();
     DAT_bTrendRecordAdd(tValue);
 }
 
 void initCS5463(void)
 {
-//	  write_5463(0x5e,0x80,0x00,0x00);
-//	   write_5463(0x40,0x00,0x00,0x01);
-//	   write_5463(0x4a,0x00,0x0f,0xa0);
-//	   write_5463(0x74,0x00,0x00,0x00);
-//	   write_5463(0x64,0x80,0x00,0x01);
-//
 	uint8_t unPara[3];
 
 	unPara[0] = 0x80;
@@ -550,15 +597,6 @@ void CS5463IF_Routine(void)
 {
 	uint8_t unCS5463Data[3];	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
 
-	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 0);
-	vTaskDelay(200/portTICK_RATE_MS);
-	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 1);
-	vTaskDelay(200/portTICK_RATE_MS);
-
-	writeCS5463SPI(CS5463_CMD_SYNC_1);
-	writeCS5463SPI(CS5463_CMD_SYNC_1);
-	writeCS5463SPI(CS5463_CMD_SYNC_1);
-	writeCS5463SPI(CS5463_CMD_SYNC_0);
 	initCS5463();
 	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 
@@ -570,17 +608,6 @@ void CS5463IF_Routine(void)
 		// Temperature
 		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463Data, sizeof(unCS5463Data));
 		fCS5463_T = (int8_t)(unCS5463Data[0]);
-//		unCS5463_P = 15 + ((float)(unCS5463ReadData[1] % 100))/100;
-		vTaskDelay(200/portTICK_RATE_MS);
-
-		// Current
-		CS5463IF_Read(CS5463_CMD_RD_IRMS, unCS5463Data, sizeof(unCS5463Data));
-		unCS5463_IRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2]; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
-		vTaskDelay(200/portTICK_RATE_MS);
-
-		// Voltage
-		CS5463IF_Read(CS5463_CMD_RD_VRMS, unCS5463Data, sizeof(unCS5463Data));
-		unCS5463_VRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2]; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Status
@@ -588,9 +615,14 @@ void CS5463IF_Routine(void)
 		unCS5463_Status = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];
 		vTaskDelay(200/portTICK_RATE_MS);
 
+		// Current
+		CS5463IF_Read(CS5463_CMD_RD_I_RMS, unCS5463_I_RMS, sizeof(unCS5463_I_RMS));
+		// Voltage
+		CS5463IF_Read(CS5463_CMD_RD_V_RMS, unCS5463_V_RMS, sizeof(unCS5463_V_RMS));
+		vTaskDelay(400/portTICK_RATE_MS);
+
 		// Power
-		CS5463IF_Read(CS5463_CMD_RD_P, unCS5463Data, sizeof(unCS5463Data));
-		unCS5463_P = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
+		CS5463IF_Read(CS5463_CMD_RD_P_ACTIVE, unCS5463_P_Active, sizeof(unCS5463_P_Active));
 		vTaskDelay(200/portTICK_RATE_MS);
 	}
 	os_timer_disarm(&tTrendRecord);
@@ -599,6 +631,16 @@ void CS5463IF_Routine(void)
 void CS5463_Manager(void *pvParameters)
 {
 	CS5463IF_Init();
+
+	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 0);
+	vTaskDelay(200/portTICK_RATE_MS);
+	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 1);
+	vTaskDelay(200/portTICK_RATE_MS);
+
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_0);
 
 	while(1){
 		if (tSmartSocketParameter.tCS5463Calib.unValidation != 0xA5A5A5A5){
@@ -614,19 +656,40 @@ uint32_t CS5463_unGetStatus(void)
 	return unCS5463_Status;
 }
 
-uint32_t CS5463_unGetCurrent(void)
+float CS5463_fGetI_RMS(void)
 {
-	return unCS5463_IRMS;
+	float fResult = 0;
+
+	fResult = fConvert24BitToFloat(unCS5463_I_RMS);
+	fResult = (fResult * tSmartSocketParameter.tCS5463Calib.fI_Max) / 0.6 ;
+
+    return fResult;
 }
 
-uint32_t CS5463_unGetVoltage(void)
+float CS5463_fGetV_RMS(void)
 {
-	return unCS5463_VRMS;
+	float fResult = 0;
+
+	fResult = fConvert24BitToFloat(unCS5463_V_RMS);
+	fResult = (fResult * tSmartSocketParameter.tCS5463Calib.fV_Max) / 0.6 ;
+
+    return fResult;
 }
 
-uint32_t CS5463_unGetPower(void)
+float CS5463_fGetActivePower(void)
 {
-	return unCS5463_P;
+	float fResult = 0;
+	fResult = fConvert24BitToCmpltFloat(unCS5463_P_Active);
+    if(fResult <0)
+    	fResult +=1;
+
+    fResult *= tSmartSocketParameter.tCS5463Calib.fI_Max;
+    fResult /= 1000;
+    fResult *= tSmartSocketParameter.tCS5463Calib.fV_Max;
+    fResult /= 0.6;
+    fResult /= 0.6;
+
+	return fResult;
 }
 
 float CS5463_fGetTemperature(void)

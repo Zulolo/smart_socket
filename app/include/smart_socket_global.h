@@ -113,6 +113,8 @@ typedef struct CS5463_calib_para{
 	uint32 unDC_I_Offset;
 	uint32 unV_Gain;
 	uint32 unI_Gain;
+	float fI_Max;
+	float fV_Max;
 }CS5463Calib_para_t;
 
 typedef struct SmartSocketParameter{
@@ -148,9 +150,9 @@ typedef struct SmartSocketParameter{
 typedef struct TrendContent{
 	uint32_t unTime;
 	float fTemperature;
-	float fCurrent;
-	float fVoltage;
-	float fPower;
+	uint32_t unI_RMS;
+	uint32_t unV_RMS;
+//	uint32_t unActivePower;
 }TrendContent_t;
 
 #endif /* APP_INCLUDE_SMART_SOCKET_GLOBAL_H_ */
