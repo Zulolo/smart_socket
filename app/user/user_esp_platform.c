@@ -171,6 +171,7 @@ void wifi_conn_event_cb(System_Event_t *event)
     switch (event->event_id) {
         case EVENT_STAMODE_GOT_IP:
         	device_status = DEVICE_GOT_IP;
+        	user_link_led_output(LED_ON);
 //        	tSmartSocketParameter.tConfigure.bIPGotten = 1;
             break;
         default:
@@ -242,14 +243,15 @@ smartconfig_done(sc_status status, void *pdata)
 void  
 smartconfig_task(void *pvParameters)
 {
+	user_link_led_output(LED_1HZ);
     printf("smartconfig_task start\n");
-    printf("wifi_set_opmode \n");
+//    printf("wifi_set_opmode \n");
 	wifi_set_opmode(STATION_MODE);
-	printf("wifi_station_disconnect \n");
+//	printf("wifi_station_disconnect \n");
     wifi_station_disconnect();
-	printf("smartconfig_stop \n");
+//	printf("smartconfig_stop \n");
 	smartconfig_stop();
-	printf("smartconfig_start \n");
+//	printf("smartconfig_start \n");
     smartconfig_start(smartconfig_done);
 
     vTaskDelete(NULL);
@@ -372,9 +374,9 @@ exception (%d): \n",rtc_info.reason,rtc_info.epc1,rtc_info.epc2,rtc_info.epc3,rt
 void PLTFM_startSmartConfig(void)
 {
 //	printf("No previous AP record found, enter smart config. \n");
-	printf("device_status = 0 \n");
+//	printf("device_status = 0 \n");
 	device_status = 0; //tSmartSocketParameter.tConfigure.bIPGotten = 0; //
-	printf("xTaskCreate \n");
+//	printf("xTaskCreate \n");
 	xTaskCreate(smartconfig_task, "smartconfig_task", 256, NULL, 2, NULL);
 }
 
@@ -382,6 +384,7 @@ void reconnectAP(void)
 {
 	/* entry station mode and connect to ap cached */
 //	printf("entry station mode to connect server \n");
+	user_link_led_output(LED_20HZ);
 	wifi_set_opmode(STATION_MODE);
 	wifi_set_event_handler_cb(wifi_conn_event_cb);
 }

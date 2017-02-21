@@ -230,6 +230,39 @@ power_value_get(cJSON *pcjson, const char* pname )
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
+"AC_V_Offset":24,
+"DC_V_Offset":24,
+"AC_I_Offset":24,
+"DC_I_Offset":24,
+"V_Gain":24,
+"I_Gain":24}}
+*******************************************************************************/
+LOCAL int
+cs5463_calib_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response creat fail\n");
+        return -1;
+    }
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "AC_V_Offset", tSmartSocketParameter.tCS5463Calib.unAC_V_Offset);
+    cJSON_AddNumberToObject(pSubJson_response, "DC_V_Offset", tSmartSocketParameter.tCS5463Calib.unDC_V_Offset);
+    cJSON_AddNumberToObject(pSubJson_response, "AC_I_Offset", tSmartSocketParameter.tCS5463Calib.unAC_I_Offset);
+    cJSON_AddNumberToObject(pSubJson_response, "DC_I_Offset", tSmartSocketParameter.tCS5463Calib.unDC_I_Offset);
+    cJSON_AddNumberToObject(pSubJson_response, "V_Gain", tSmartSocketParameter.tCS5463Calib.unV_Gain);
+    cJSON_AddNumberToObject(pSubJson_response, "I_Gain", tSmartSocketParameter.tCS5463Calib.unI_Gain);
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : temperature_value_get
+ * Description  : set up temperature value as a JSON format
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{
 "temperature":24,
 "unit":"C"}}
 *******************************************************************************/
@@ -1476,6 +1509,7 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"client", "temperature", temperature_value_get,NULL},
 	{"client", "trend", trend_get,NULL},
 	{"client", "event", event_history_get,NULL},
+	{"client", "calib", cs5463_calib_get,NULL},
     {"config", "reboot", NULL,user_set_reboot},
     {"config", "wifi", wifi_info_get,wifi_info_set},
 //    {"client", "scan",  scan_info_get, NULL},
