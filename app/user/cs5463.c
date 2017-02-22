@@ -32,12 +32,18 @@
 #define CS5463_CALIB_WAIT_PRESS_KEY		120000
 #define CS5463_DELAY_AFTER_CALIB_CMD	5000
 
-static uint32_t unCS5463_Status;
-//static uint32_t unCS5463_IRMS;
+//static uint32_t unCS5463_Status;
+////static uint32_t unCS5463_IRMS;
+//static int8_t fCS5463_T;
+//static uint8_t unCS5463_I_RMS[3];
+//static uint8_t unCS5463_V_RMS[3];
+//static uint8_t unCS5463_P_Active[3];
+
 static int8_t fCS5463_T;
-static uint8_t unCS5463_I_RMS[3];
-static uint8_t unCS5463_V_RMS[3];
-static uint8_t unCS5463_P_Active[3];
+static uint32_t unCS5463_IRMS;
+static uint32_t unCS5463_Status;
+static uint32_t unCS5463_VRMS;
+static uint32_t unCS5463_P;
 
 //FLASH_SECTOR_SIZE
 extern SmartSocketParameter_t tSmartSocketParameter;
@@ -62,20 +68,22 @@ typedef enum{
  * Parameters   : pointer of 3 bytes data
  * Returns      : float result
 *******************************************************************************/
-float fConvert24BitToFloat(uint8_t* pData)
+double fConvert24BitToFloat(uint8_t* pData)
 {
-	float fResult = 0;
+	double fResult = 0.22;
 	uint32_t unTemp = 1;
 	uint8_t i = 0, j = 0;
-
+	printf("fResult: %f\n", fResult);
+	printf("pData: 0x%02X,0x%02X,0x%02X\n", pData[0], pData[1], pData[2]);
 	for(i = 0; i < 24; i++){
 		if((pData[(uint8_t)(i/8)] << (i%8)) & 0x80){
 			unTemp = 1;
 			for(j = 0; j < i+1; j++){
 				unTemp *= 2;
 			}
-//			printf("unTemp is:%u\n", unTemp);
-			fResult +=  (1/(float)unTemp);
+			printf("unTemp is:%u\n", unTemp);
+			fResult +=  (((double)1)/((double)unTemp));
+			printf("fResult is:%f\n", fResult);
 		}
 	}
 	return fResult;
@@ -88,27 +96,27 @@ float fConvert24BitToFloat(uint8_t* pData)
  * Parameters   : pointer of 3 bytes data
  * Returns      : float result
 *******************************************************************************/
-float fConvert24BitToCmpltFloat(uint8_t* pData)
-{
-	float fResult = 0;
-	uint32_t unTemp = 1;
-	uint8_t i = 0, j = 0;
-
-	for(i = 1; i < 24; i++){
-		if((pData[(uint8_t)(i/8)] << (i%8)) & 0x80){
-			unTemp = 1;
-			for(j = 0;j<i;j++){
-				unTemp *= 2;
-			}
-			fResult +=  (1/(float)unTemp);
-		}
-	}
-
-	if(pData[0] & 0x80){
-		fResult *= -1;
-	}
-	return fResult ;
-}
+//float fConvert24BitToCmpltFloat(uint8_t* pData)
+//{
+//	float fResult = 0;
+//	uint32_t unTemp = 1;
+//	uint8_t i = 0, j = 0;
+//
+//	for(i = 1; i < 24; i++){
+//		if((pData[(uint8_t)(i/8)] << (i%8)) & 0x80){
+//			unTemp = 1;
+//			for(j = 0;j<i;j++){
+//				unTemp *= 2;
+//			}
+//			fResult +=  (1/(float)unTemp);
+//		}
+//	}
+//
+//	if(pData[0] & 0x80){
+//		fResult *= -1;
+//	}
+//	return fResult ;
+//}
 
 void writeCS5463SPI(uint8_t unCmd)
 {
@@ -235,8 +243,8 @@ trend_record_callback(void *arg)
 {
 	TrendContent_t tValue;
 	tValue.fTemperature = fCS5463_T;
-	tValue.unI_RMS = (unCS5463_I_RMS[0] << 16) | (unCS5463_I_RMS[1] << 8) | unCS5463_I_RMS[2];
-	tValue.unV_RMS = (unCS5463_V_RMS[0] << 16) | (unCS5463_V_RMS[1] << 8) | unCS5463_V_RMS[2];
+//	tValue.unI_RMS = (unCS5463_I_RMS[0] << 16) | (unCS5463_I_RMS[1] << 8) | unCS5463_I_RMS[2];
+//	tValue.unV_RMS = (unCS5463_V_RMS[0] << 16) | (unCS5463_V_RMS[1] << 8) | unCS5463_V_RMS[2];
 //	tValue.unActivePower = unCS5463_P;
 	tValue.unTime = sntp_get_current_timestamp();
     DAT_bTrendRecordAdd(tValue);
@@ -618,6 +626,17 @@ void CS5463IF_Routine(void)
 		// Temperature
 		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463Data, sizeof(unCS5463Data));
 		fCS5463_T = (int8_t)(unCS5463Data[0]);
+//		unCS5463_P = 15 + ((float)(unCS5463ReadData[1] % 100))/100;
+		vTaskDelay(200/portTICK_RATE_MS);
+
+		// Current
+		CS5463IF_Read(CS5463_CMD_RD_IRMS, unCS5463Data, sizeof(unCS5463Data));
+		unCS5463_IRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2]; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
+		vTaskDelay(200/portTICK_RATE_MS);
+
+		// Voltage
+		CS5463IF_Read(CS5463_CMD_RD_VRMS, unCS5463Data, sizeof(unCS5463Data));
+		unCS5463_VRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2]; //(float)(*((int16_t*)(unCS5463ReadData)))/MAX_SIGNED_INT_16_VALUE;
 		vTaskDelay(200/portTICK_RATE_MS);
 
 		// Status
@@ -625,19 +644,34 @@ void CS5463IF_Routine(void)
 		unCS5463_Status = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];
 		vTaskDelay(200/portTICK_RATE_MS);
 
-		// Current
-		CS5463IF_Read(CS5463_CMD_RD_I_RMS, unCS5463_I_RMS, sizeof(unCS5463_I_RMS));
-//		CS5463IF_Read(CS5463_CMD_RD_I_RMS, unCS5463Data, sizeof(unCS5463Data));
-//		unCS5463_IRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];
-		vTaskDelay(200/portTICK_RATE_MS);
-
-		// Voltage
-		CS5463IF_Read(CS5463_CMD_RD_V_RMS, unCS5463_V_RMS, sizeof(unCS5463_V_RMS));
-		vTaskDelay(200/portTICK_RATE_MS);
-
 		// Power
-		CS5463IF_Read(CS5463_CMD_RD_P_ACTIVE, unCS5463_P_Active, sizeof(unCS5463_P_Active));
+		CS5463IF_Read(CS5463_CMD_RD_P, unCS5463Data, sizeof(unCS5463Data));
+		unCS5463_P = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];	//((unCS5463ReadData[0] << 16) | (unCS5463ReadData[1] << 8) | unCS5463ReadData[2]);
 		vTaskDelay(200/portTICK_RATE_MS);
+
+//		// Temperature
+//		CS5463IF_Read(CS5463_CMD_RD_T, unCS5463Data, sizeof(unCS5463Data));
+//		fCS5463_T = (int8_t)(unCS5463Data[0]);
+//		vTaskDelay(200/portTICK_RATE_MS);
+//
+//		// Status
+//		CS5463IF_Read(CS5463_CMD_RD_STATUS, unCS5463Data, sizeof(unCS5463Data));
+//		unCS5463_Status = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];
+//		vTaskDelay(200/portTICK_RATE_MS);
+//
+//		// Current
+//		CS5463IF_Read(CS5463_CMD_RD_I_RMS, unCS5463_I_RMS, sizeof(unCS5463_I_RMS));
+////		CS5463IF_Read(CS5463_CMD_RD_I_RMS, unCS5463Data, sizeof(unCS5463Data));
+////		unCS5463_IRMS = (unCS5463Data[0] << 16) | (unCS5463Data[1] << 8) | unCS5463Data[2];
+//		vTaskDelay(200/portTICK_RATE_MS);
+//
+//		// Voltage
+//		CS5463IF_Read(CS5463_CMD_RD_V_RMS, unCS5463_V_RMS, sizeof(unCS5463_V_RMS));
+//		vTaskDelay(200/portTICK_RATE_MS);
+//
+//		// Power
+//		CS5463IF_Read(CS5463_CMD_RD_P_ACTIVE, unCS5463_P_Active, sizeof(unCS5463_P_Active));
+//		vTaskDelay(200/portTICK_RATE_MS);
 	}
 	os_timer_disarm(&tTrendRecord);
 }
@@ -654,51 +688,81 @@ void CS5463_Manager(void *pvParameters)
 		}
 	}
 }
-	//
+
 uint32_t CS5463_unGetStatus(void)
 {
 	return unCS5463_Status;
 }
 
-float CS5463_fGetI_RMS(void)
+uint32_t CS5463_unGetCurrent(void)
 {
-	float fResult = 0;
-
-	printf("unCS5463_I_RMS: 0x%02X, 0x%02X, 0x%02X\n", unCS5463_I_RMS[0], unCS5463_I_RMS[1], unCS5463_I_RMS[2]);
-	fResult = fConvert24BitToFloat(unCS5463_I_RMS);
-//	printf("fResult before is: %f\n", fResult);
-	fResult = (fResult * tSmartSocketParameter.tCS5463Calib.fI_Max) / 0.6 ;
-//	printf("fResult after is: %f\n", fResult);
-    return fResult;
+	return unCS5463_IRMS;
 }
 
-float CS5463_fGetV_RMS(void)
+//uint32_t CS5463_unGetVoltage(void)
+//{
+//	return unCS5463_VRMS;
+//}
+
+uint32_t CS5463_unGetPower(void)
 {
-	float fResult = 0;
-
-	fResult = fConvert24BitToFloat(unCS5463_V_RMS);
-	fResult = (fResult * tSmartSocketParameter.tCS5463Calib.fV_Max) / 0.6 ;
-
-    return fResult;
-}
-
-float CS5463_fGetActivePower(void)
-{
-	float fResult = 0;
-	fResult = fConvert24BitToCmpltFloat(unCS5463_P_Active);
-    if(fResult <0)
-    	fResult +=1;
-
-    fResult *= tSmartSocketParameter.tCS5463Calib.fI_Max;
-    fResult /= 1000;
-    fResult *= tSmartSocketParameter.tCS5463Calib.fV_Max;
-    fResult /= 0.6;
-    fResult /= 0.6;
-
-	return fResult;
+	return unCS5463_P;
 }
 
 float CS5463_fGetTemperature(void)
 {
 	return fCS5463_T;
 }
+	//
+//uint32_t CS5463_unGetStatus(void)
+//{
+//	return unCS5463_Status;
+//}
+//
+//float CS5463_fGetI_RMS(void)
+//{
+//	float fResult = 0;
+//
+//	printf("unCS5463_I_RMS: 0x%02X, 0x%02X, 0x%02X\n", unCS5463_I_RMS[0], unCS5463_I_RMS[1], unCS5463_I_RMS[2]);
+//	fResult = fConvert24BitToFloat(unCS5463_I_RMS);
+////	printf("fResult before is: %f\n", fResult);
+//	fResult = (fResult * tSmartSocketParameter.tCS5463Calib.fI_Max) / 0.6 ;
+////	printf("fResult after is: %f\n", fResult);
+//    return fResult;
+//}
+//
+double CS5463_fGetV_RMS(void)
+{
+	uint8_t unData[3];
+	double fResult = 0;
+	unCS5463_VRMS = 9156988;
+	unData[0] = (unCS5463_VRMS >> 16) & 0xFF;
+	unData[1] = (unCS5463_VRMS >> 8) & 0xFF;
+	unData[2] = unCS5463_VRMS & 0xFF;
+
+	fResult = fConvert24BitToFloat(unData);//(unCS5463_V_RMS);
+	fResult = (fResult * tSmartSocketParameter.tCS5463Calib.fV_Max) / 0.6 ;
+
+    return fResult;
+}
+//
+//float CS5463_fGetActivePower(void)
+//{
+//	float fResult = 0;
+//	fResult = fConvert24BitToCmpltFloat(unCS5463_P_Active);
+//    if(fResult <0)
+//    	fResult +=1;
+//
+//    fResult *= tSmartSocketParameter.tCS5463Calib.fI_Max;
+//    fResult /= 1000;
+//    fResult *= tSmartSocketParameter.tCS5463Calib.fV_Max;
+//    fResult /= 0.6;
+//    fResult /= 0.6;
+//
+//	return fResult;
+//}
+//
+//float CS5463_fGetTemperature(void)
+//{
+//	return fCS5463_T;
+//}

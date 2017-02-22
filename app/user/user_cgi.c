@@ -167,7 +167,7 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_fGetI_RMS());
+    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_unGetCurrent());//CS5463_fGetI_RMS());
     cJSON_AddStringToObject(pSubJson_response, "unit", "A");
     return 0;
 }
@@ -219,7 +219,7 @@ power_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "power", CS5463_fGetActivePower());
+    cJSON_AddNumberToObject(pSubJson_response, "power", CS5463_unGetPower());//CS5463_fGetActivePower());
     cJSON_AddStringToObject(pSubJson_response, "unit", "W");
     return 0;
 }
@@ -410,8 +410,8 @@ trend_get(cJSON *pcjson, const char* pname)
 			}
     		cJSON_AddItemToObject(pcjson, "trend", pSubJsonEvent);
             cJSON_AddNumberToObject(pSubJsonEvent, "time", pTrendContent[unTrendRecordIndex].unTime);
-            cJSON_AddNumberToObject(pSubJsonEvent, "I_RMS", pTrendContent[unTrendRecordIndex].unI_RMS);
-            cJSON_AddNumberToObject(pSubJsonEvent, "V_RMS", pTrendContent[unTrendRecordIndex].unV_RMS);
+//            cJSON_AddNumberToObject(pSubJsonEvent, "I_RMS", pTrendContent[unTrendRecordIndex].unI_RMS);
+//            cJSON_AddNumberToObject(pSubJsonEvent, "V_RMS", pTrendContent[unTrendRecordIndex].unV_RMS);
     	}
     	free(pTrendContent);
     	return 0;
