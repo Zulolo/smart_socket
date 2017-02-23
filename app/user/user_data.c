@@ -16,6 +16,23 @@ xSemaphoreHandle xSmartSocketCaliSemaphore;
 SmartSocketEventList_t tSmartSocketEventList;
 SmartSocketParameter_t tSmartSocketParameter;
 
+float DAT_fGetCurrentThrhld(void)
+{
+	return tSmartSocketParameter.fCurrentThreshold;
+}
+
+float DAT_fGetIMax(void)
+{
+	return tSmartSocketParameter.tCS5463Calib.fI_Max;
+}
+
+float DAT_fGetVMax(void)
+{
+//	printf("SmartSocketParameter_t %d\n",sizeof(SmartSocketParameter_t));
+//	printf("tSmartSocketParameter.tCS5463Calib.fV_Max %d\n", (int32_t)(tSmartSocketParameter.tCS5463Calib.fV_Max));
+	return tSmartSocketParameter.tCS5463Calib.fV_Max;
+}
+
 int32_t DAT_nFlashDataClean(void)
 {
 	if(xSemaphoreTake(xSmartSocketEventListSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
@@ -31,13 +48,13 @@ int32_t DAT_nFlashDataClean(void)
 	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE){
 		memset(&tSmartSocketParameter, 0, sizeof(tSmartSocketParameter));
 		tSmartSocketParameter.unValidation = 0xA5A5A5A5;
-		tSmartSocketParameter.tCS5463Calib.fI_Max = 10;
-		tSmartSocketParameter.tCS5463Calib.fV_Max = 250;
+		tSmartSocketParameter.tCS5463Calib.fI_Max = 9.8;
+		tSmartSocketParameter.tCS5463Calib.fV_Max = 225;
 		tSmartSocketParameter.tConfigure.bButtonRelayEnable = 1;
 		tSmartSocketParameter.tConfigure.bSNTPEnable = 1;
 //		tSmartSocketParameter.tConfigure.bRelayScheduleEnable = 0;
 		tSmartSocketParameter.unFW_UpgradePort = 80;
-		tSmartSocketParameter.fCurrentThreshold = 10;
+		tSmartSocketParameter.fCurrentThreshold = 9.8;
 		memcpy(tSmartSocketParameter.sSNTP_Server[0], "cn.pool.ntp.org", sizeof("cn.pool.ntp.org"));
 		memcpy(tSmartSocketParameter.sSNTP_Server[1], "asia.pool.ntp.org", sizeof("asia.pool.ntp.org"));
 		memcpy(tSmartSocketParameter.sSNTP_Server[2], "pool.ntp.org", sizeof("pool.ntp.org"));

@@ -15,5 +15,8 @@ SmartSocketEvent_t DAT_nGetEventHistory(uint8_t unEventSelecter);	// unEventInde
 bool DAT_bTrendRecordAdd(TrendContent_t tValueNeedToAdd);
 int32_t DAT_nFlashDataClean(void);
 TrendContent_t* DAT_pGetTrends(uint32_t unStartTime, uint32_t unEndTime, uint8_t* pTrendRecordNum);
+float DAT_fGetIMax(void);
+float DAT_fGetVMax(void);
+float DAT_fGetCurrentThrhld(void);
 
 #endif /* APP_INCLUDE_USER_DATA_H_ */

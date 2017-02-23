@@ -167,7 +167,7 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", CS5463_unGetCurrent());//CS5463_fGetI_RMS());
+    cJSON_AddNumberToObject(pSubJson_response, "current", (int32_t)CS5463_fGetI_RMS());
     cJSON_AddStringToObject(pSubJson_response, "unit", "A");
     return 0;
 }
@@ -190,10 +190,10 @@ voltage_value_get(cJSON *pcjson, const char* pname )
         printf("pSubJson_response create fail\n");
         return -1;
     }
-
+//    printf("tSmartSocketParameter.tCS5463Calib.nV_Max is: %d\n", tSmartSocketParameter.tCS5463Calib.nV_Max);
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "voltage", CS5463_fGetV_RMS());
+    cJSON_AddNumberToObject(pSubJson_response, "voltage", (int32_t)CS5463_fGetV_RMS());
     cJSON_AddStringToObject(pSubJson_response, "unit", "V");
     return 0;
 }
@@ -219,7 +219,7 @@ power_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "power", CS5463_unGetPower());//CS5463_fGetActivePower());
+    cJSON_AddNumberToObject(pSubJson_response, "power", (int32_t)CS5463_fGetActivePower());
     cJSON_AddStringToObject(pSubJson_response, "unit", "W");
     return 0;
 }
@@ -287,7 +287,7 @@ cs5463_calib_set(const char *pValue)
     	pJsonSubValue = cJSON_GetObjectItem(pJsonSub, "I_Max");
         if(NULL != pJsonSubValue){
             if(pJsonSubValue->type == cJSON_Number){
-            	tSmartSocketParameter.tCS5463Calib.fI_Max = pJsonSubValue->valueint;
+            	tSmartSocketParameter.tCS5463Calib.fI_Max = pJsonSubValue->valuedouble;
             }
         }else{
         	cJSON_Delete(pJson);
@@ -297,7 +297,7 @@ cs5463_calib_set(const char *pValue)
         pJsonSubValue = cJSON_GetObjectItem(pJsonSub, "V_Max");
 		if(NULL != pJsonSubValue){
 			if(pJsonSubValue->type == cJSON_Number){
-				tSmartSocketParameter.tCS5463Calib.fV_Max = pJsonSubValue->valueint;
+				tSmartSocketParameter.tCS5463Calib.fV_Max = pJsonSubValue->valuedouble;
 			}
 		}else{
 			cJSON_Delete(pJson);
@@ -341,7 +341,7 @@ temperature_value_get(cJSON *pcjson, const char* pname )
     }
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "temperature", CS5463_fGetTemperature());
+    cJSON_AddNumberToObject(pSubJson_response, "temperature", (float)27.86);//CS5463_nGetTemperature());
     cJSON_AddStringToObject(pSubJson_response, "unit", "C");
     return 0;
 }
