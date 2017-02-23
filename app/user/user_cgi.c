@@ -152,8 +152,8 @@ signal_strength_get(cJSON *pcjson, const char* pname )
  * Parameters   : pcjson -- A pointer to a JSON object
  * Returns      : result
 {"response":{
-"current":3.2,
-"unit":"A"}}
+"current":3200,
+"unit":"mA"}}
 *******************************************************************************/
 LOCAL int
 current_value_get(cJSON *pcjson, const char* pname )
@@ -167,8 +167,8 @@ current_value_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
 
-    cJSON_AddNumberToObject(pSubJson_response, "current", (int32_t)CS5463_fGetI_RMS());
-    cJSON_AddStringToObject(pSubJson_response, "unit", "A");
+    cJSON_AddNumberToObject(pSubJson_response, "current", (int32_t)(CS5463_fGetI_RMS() * 1000));
+    cJSON_AddStringToObject(pSubJson_response, "unit", "mA");
     return 0;
 }
 
