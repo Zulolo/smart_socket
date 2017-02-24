@@ -19,4 +19,19 @@ float DAT_fGetIMax(void);
 float DAT_fGetVMax(void);
 float DAT_fGetCurrentThrhld(void);
 
+bool DAT_unGetCalib(void);
+uint32 DAT_unGetAC_V_Offset(void);
+uint32 DAT_unGetDC_V_Offset(void);
+uint32 DAT_unGetAC_I_Offset(void);
+uint32 DAT_unGetDC_I_Offset(void);
+uint32 DAT_unGetV_Gain(void);
+uint32 DAT_unGetI_Gain(void);
+void DAT_unSetCalib(bool bCalib);
+void DAT_unSetAC_V_Offset(uint32 unAC_V_Offset);
+void DAT_unSetDC_V_Offset(uint32 unDC_V_Offset);
+void DAT_unSetAC_I_Offset(uint32 unAC_I_Offset);
+void DAT_unSetDC_I_Offset(uint32 unDC_I_Offset);
+void DAT_unSetV_Gain(uint32 unV_Gain);
+void DAT_unSetI_Gain(uint32 unI_Gain);
+
 #endif /* APP_INCLUDE_USER_DATA_H_ */

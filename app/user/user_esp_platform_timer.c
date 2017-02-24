@@ -347,7 +347,7 @@ user_platform_timer_bkup(void)
 {
 
 	tSmartSocketParameter.tTimerBkupParam.unTimestamp = sntp_get_current_timestamp();
-	tSmartSocketParameter.tTimerBkupParam.unMagic = 0xa5a5;
+	tSmartSocketParameter.tTimerBkupParam.unMagic = 0xA5A5A5A5;
 	tSmartSocketParameter.tTimerBkupParam.unBufferSize = tTimerParam.unBufferSize;
     memcpy(tSmartSocketParameter.sTimerSplitsString, tTimerParam.pSplitBuffer, tTimerParam.unBufferSize);
 	if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
@@ -369,7 +369,7 @@ void
 user_platform_timer_restore(void)
 {
     /*check the maic number, 0xa5a5 means saved before reboot*/
-    if((0xa5a5 == tSmartSocketParameter.tTimerBkupParam.unMagic) &&
+    if((0xA5A5A5A5 == tSmartSocketParameter.tTimerBkupParam.unMagic) &&
     		(tSmartSocketParameter.sTimerSplitsString[0] != '\0') &&
 			(tSmartSocketParameter.tTimerBkupParam.unBufferSize != 0)){
         printf(">>>user_platform_timer_restore \n");

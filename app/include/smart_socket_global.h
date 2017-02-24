@@ -100,7 +100,7 @@ typedef struct timer_bkup_param{
 //	uint32 timer_start_time;
 	uint32 unBufferSize;
 	uint32 unTimestamp;
-    uint16 unMagic;
+    uint32 unMagic;
     char *pSplitBuffer;
 //    char pad;
 }TimerBkup_para_t;
@@ -141,10 +141,10 @@ typedef struct SmartSocketParameter{
 	RelaySchedule_t tRelaySchedule[RELAY_SCHEDULE_NUM];
 	float fCurrentThreshold;
 	uint32 unTrendRecordNum;
-	uint32 unValidation;	//TODO: use CRC of tEvent array data
+	CS5463Calib_para_t tCS5463Calib;
 	TimerBkup_para_t tTimerBkupParam;
 	char sTimerSplitsString[TIMER_SAVE_FLASH_NUMBER*EACH_TIMER_SAVE_FLASH_MAX_LEN];
-	CS5463Calib_para_t tCS5463Calib;
+	uint32 unValidation;	//TODO: use CRC of tEvent array data
 }SmartSocketParameter_t;
 
 typedef struct TrendContent{

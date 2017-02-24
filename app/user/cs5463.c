@@ -289,35 +289,47 @@ void initCS5463(void)
 
 	CS5463IF_Read(CS5463_CMD_RD_STATUS, unPara, sizeof(unPara));
 	CS5463IF_WriteReg(CS5463_CMD_WR_STATUS, unPara, sizeof(unPara));
+}
 
-	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unDC_V_Offset >> 16) & 0xFF;
-	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unDC_V_Offset >> 8) & 0xFF;
-	unPara[2] = tSmartSocketParameter.tCS5463Calib.unDC_V_Offset & 0xFF;
+void writeCS5463Calib(void)
+{
+	uint8_t unPara[3];
+	uint32_t unTemp;
+
+	unTemp = DAT_unGetDC_V_Offset();
+	unPara[0] = (unTemp >> 16) & 0xFF;
+	unPara[1] = (unTemp >> 8) & 0xFF;
+	unPara[2] = unTemp & 0xFF;
 	CS5463IF_WriteReg(CS5463_CMD_WR_DC_V_OFFSET, unPara, sizeof(unPara));
 
-	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unV_Gain >> 16) & 0xFF;
-	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unV_Gain >> 8) & 0xFF;
-	unPara[2] = tSmartSocketParameter.tCS5463Calib.unV_Gain & 0xFF;
+	unTemp = DAT_unGetV_Gain();
+	unPara[0] = (unTemp >> 16) & 0xFF;
+	unPara[1] = (unTemp >> 8) & 0xFF;
+	unPara[2] = unTemp & 0xFF;
 	CS5463IF_WriteReg(CS5463_CMD_WR_V_GAIN, unPara, sizeof(unPara));
 
-	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unAC_V_Offset >> 16) & 0xFF;
-	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unAC_V_Offset >> 8) & 0xFF;
-	unPara[2] = tSmartSocketParameter.tCS5463Calib.unAC_V_Offset & 0xFF;
+	unTemp = DAT_unGetAC_V_Offset();
+	unPara[0] = (unTemp >> 16) & 0xFF;
+	unPara[1] = (unTemp >> 8) & 0xFF;
+	unPara[2] = unTemp & 0xFF;
 	CS5463IF_WriteReg(CS5463_CMD_WR_AC_V_OFFSET, unPara, sizeof(unPara));
 
-	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unDC_I_Offset >> 16) & 0xFF;
-	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unDC_I_Offset >> 8) & 0xFF;
-	unPara[2] = tSmartSocketParameter.tCS5463Calib.unDC_I_Offset & 0xFF;
+	unTemp = DAT_unGetDC_I_Offset();
+	unPara[0] = (unTemp >> 16) & 0xFF;
+	unPara[1] = (unTemp >> 8) & 0xFF;
+	unPara[2] = unTemp & 0xFF;
 	CS5463IF_WriteReg(CS5463_CMD_WR_DC_I_OFFSET, unPara, sizeof(unPara));
 
-	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unI_Gain >> 16) & 0xFF;
-	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unI_Gain >> 8) & 0xFF;
-	unPara[2] = tSmartSocketParameter.tCS5463Calib.unI_Gain & 0xFF;
+	unTemp = DAT_unGetI_Gain();
+	unPara[0] = (unTemp >> 16) & 0xFF;
+	unPara[1] = (unTemp >> 8) & 0xFF;
+	unPara[2] = unTemp & 0xFF;
 	CS5463IF_WriteReg(CS5463_CMD_WR_I_GAIN, unPara, sizeof(unPara));
 
-	unPara[0] = (tSmartSocketParameter.tCS5463Calib.unAC_I_Offset >> 16) & 0xFF;
-	unPara[1] = (tSmartSocketParameter.tCS5463Calib.unAC_I_Offset >> 8) & 0xFF;
-	unPara[2] = tSmartSocketParameter.tCS5463Calib.unAC_I_Offset & 0xFF;
+	unTemp = DAT_unGetAC_I_Offset();
+	unPara[0] = (unTemp >> 16) & 0xFF;
+	unPara[1] = (unTemp >> 8) & 0xFF;
+	unPara[2] = unTemp & 0xFF;
 	CS5463IF_WriteReg(CS5463_CMD_WR_AC_I_OFFSET, unPara, sizeof(unPara));
 }
 
@@ -351,7 +363,7 @@ int32_t CS5463IF_Calib(void)
 	CS5463CaliState_t tCaliState;
 	uint8_t unPara[3];
 	tCaliState = CS5463_CALI_STATE_WAITING_START;
-	tSmartSocketParameter.tConfigure.bCS5463Cali = true;
+	DAT_unSetCalib(true);
 
 //	memset(&(tSmartSocketParameter.tCS5463Valid), 0, sizeof(tSmartSocketParameter.tCS5463Valid));
 	user_plug_set_status(PLUG_STATUS_OPEN);
@@ -362,8 +374,15 @@ int32_t CS5463IF_Calib(void)
 	GPIO_OUTPUT_SET(CS5463_RST_PIN_NUM, 1);
 	vTaskDelay(200/portTICK_RATE_MS);
 
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_1);
+	writeCS5463SPI(CS5463_CMD_SYNC_0);
+	initCS5463();
+	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
+
 	xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(1000/portTICK_RATE_MS));
-	while ((true == tSmartSocketParameter.tConfigure.bCS5463Cali) &&
+	while ((true == DAT_unGetCalib()) &&
 			(tCaliState != CS5463_CALI_STATE_STOP)){
 		switch (tCaliState){
 		case CS5463_CALI_STATE_WAITING_START:
@@ -390,11 +409,11 @@ int32_t CS5463IF_Calib(void)
 			CS5463IF_WriteCmd(CS5463_CMD_START_DC_V_OFFSET_CALIB);
 			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_DC_V_OFFSET, unPara, sizeof(unPara));
-				tSmartSocketParameter.tCS5463Calib.unDC_V_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				DAT_unSetDC_V_Offset((unPara[0] << 16) | (unPara[1] << 8) | unPara[2]);
 				user_relay_led_output(LED_1HZ);
 
 				printf("DC voltage offset is 0x%06X.\nReady to calibrate AC voltage offset, press button when ready.\n",
-						tSmartSocketParameter.tCS5463Calib.unDC_V_Offset);
+						DAT_unGetDC_V_Offset());
 				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(CS5463_CALIB_WAIT_PRESS_KEY/portTICK_RATE_MS)) == pdTRUE ){
 					tCaliState = CS5463_CALI_STATE_AC_V_OFFSET;
 					CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
@@ -425,11 +444,11 @@ int32_t CS5463IF_Calib(void)
 			CS5463IF_WriteCmd(CS5463_CMD_START_AC_V_OFFSET_CALIB);
 			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_AC_V_OFFSET, unPara, sizeof(unPara));
-				tSmartSocketParameter.tCS5463Calib.unAC_V_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				DAT_unSetAC_V_Offset((unPara[0] << 16) | (unPara[1] << 8) | unPara[2]);
 				user_relay_led_output(LED_1HZ);
 
 				printf("AC voltage offset is 0x%06X.\nReady to calibrate AC voltage gain, press button when ready.\n",
-										tSmartSocketParameter.tCS5463Calib.unAC_V_Offset);
+						DAT_unGetAC_V_Offset());
 				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(CS5463_CALIB_WAIT_PRESS_KEY/portTICK_RATE_MS)) == pdTRUE ){
 					tCaliState = CS5463_CALI_STATE_AC_V_GAIN;
 					CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
@@ -462,11 +481,11 @@ int32_t CS5463IF_Calib(void)
 			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				user_plug_set_status(PLUG_STATUS_OPEN);
 				CS5463IF_Read(CS5463_CMD_RD_V_GAIN, unPara, sizeof(unPara));
-				tSmartSocketParameter.tCS5463Calib.unV_Gain = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				DAT_unSetV_Gain((unPara[0] << 16) | (unPara[1] << 8) | unPara[2]);
 				user_relay_led_output(LED_1HZ);
 
 				printf("AC voltage gain is 0x%06X.\nReady to calibrate DC current offset, press button when ready.\n",
-														tSmartSocketParameter.tCS5463Calib.unV_Gain);
+						DAT_unGetV_Gain());
 				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(CS5463_CALIB_WAIT_PRESS_KEY/portTICK_RATE_MS)) == pdTRUE ){
 					tCaliState = CS5463_CALI_STATE_DC_I_OFFSET;
 					CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
@@ -498,11 +517,11 @@ int32_t CS5463IF_Calib(void)
 			CS5463IF_WriteCmd(CS5463_CMD_START_DC_I_OFFSET_CALIB);
 			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_DC_I_OFFSET, unPara, sizeof(unPara));
-				tSmartSocketParameter.tCS5463Calib.unDC_I_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				DAT_unSetDC_I_Offset((unPara[0] << 16) | (unPara[1] << 8) | unPara[2]);
 				user_relay_led_output(LED_1HZ);
 
 				printf("DC current offset is 0x%06X.\nReady to calibrate AC current offset, press button when ready.\n",
-																		tSmartSocketParameter.tCS5463Calib.unDC_I_Offset);
+						DAT_unGetDC_I_Offset());
 				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(CS5463_CALIB_WAIT_PRESS_KEY/portTICK_RATE_MS)) == pdTRUE ){
 					tCaliState = CS5463_CALI_STATE_AC_I_OFFSET;
 					CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
@@ -533,11 +552,11 @@ int32_t CS5463IF_Calib(void)
 			CS5463IF_WriteCmd(CS5463_CMD_START_AC_I_OFFSET_CALIB);
 			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				CS5463IF_Read(CS5463_CMD_RD_AC_I_OFFSET, unPara, sizeof(unPara));
-				tSmartSocketParameter.tCS5463Calib.unAC_I_Offset = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				DAT_unSetAC_I_Offset((unPara[0] << 16) | (unPara[1] << 8) | unPara[2]);
 				user_relay_led_output(LED_1HZ);
 
 				printf("AC current offset is 0x%06X.\nReady to calibrate AC current gain, press button when ready.\n",
-																						tSmartSocketParameter.tCS5463Calib.unAC_I_Offset);
+						DAT_unGetAC_I_Offset());
 				if(xSemaphoreTake(xSmartSocketCaliSemaphore, (portTickType)(CS5463_CALIB_WAIT_PRESS_KEY/portTICK_RATE_MS)) == pdTRUE ){
 					tCaliState = CS5463_CALI_STATE_AC_I_GAIN;
 					CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
@@ -570,10 +589,10 @@ int32_t CS5463IF_Calib(void)
 			if (waitDataReady(CS5463_DELAY_AFTER_CALIB_CMD) == true){
 				user_plug_set_status(PLUG_STATUS_OPEN);
 				CS5463IF_Read(CS5463_CMD_RD_I_GAIN, unPara, sizeof(unPara));
-				tSmartSocketParameter.tCS5463Calib.unI_Gain = (unPara[0] << 16) | (unPara[1] << 8) | unPara[2];
+				DAT_unSetI_Gain((unPara[0] << 16) | (unPara[1] << 8) | unPara[2]);
 				user_relay_led_output(LED_1HZ);
 
-				printf("AC current gain is 0x%06X.\n", tSmartSocketParameter.tCS5463Calib.unI_Gain);
+				printf("AC current gain is 0x%06X.\n", DAT_unGetI_Gain());
 				tCaliState = CS5463_CALI_STATE_RESET;
 				CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 			}else{
@@ -604,7 +623,7 @@ int32_t CS5463IF_Calib(void)
 			break;
 		}
 	}
-	tSmartSocketParameter.tConfigure.bCS5463Cali = false;
+	DAT_unSetCalib(false);
 	user_plug_set_status(PLUG_STATUS_OPEN);
 	user_relay_led_output(LED_OFF);
 	return 0;
@@ -624,6 +643,7 @@ void CS5463IF_Routine(void)
 	writeCS5463SPI(CS5463_CMD_SYNC_1);
 	writeCS5463SPI(CS5463_CMD_SYNC_0);
 	initCS5463();
+	writeCS5463Calib();
 	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 
     os_timer_disarm(&tTrendRecord);
@@ -691,7 +711,9 @@ float CS5463_fGetI_RMS(void)
 float CS5463_fGetV_RMS(void)
 {
 	float fResult;
-//	printf("DAT_fGetVMax %d\n", (int32_t)(DAT_fGetVMax()));
+//	printf("unValidation 0x%08X\n", tSmartSocketParameter.unValidation);
+//	printf("DAT_unGetDC_V_Offset %u\n", DAT_unGetDC_V_Offset());
+//	printf("DAT_unGetDC_V_Offset %u\n", tSmartSocketParameter.tCS5463Calib.unDC_V_Offset);
 	fResult = fConvert24BitToFloat(unCS5463_V_RMS);//(unCS5463_V_RMS);
 	fResult = (fResult * DAT_fGetVMax()) / 0.6 ;
 

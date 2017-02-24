@@ -21,6 +21,76 @@ float DAT_fGetCurrentThrhld(void)
 	return tSmartSocketParameter.fCurrentThreshold;
 }
 
+bool DAT_unGetCalib(void)
+{
+	return tSmartSocketParameter.tConfigure.bCS5463Cali;
+}
+
+uint32 DAT_unGetAC_V_Offset(void)
+{
+	return tSmartSocketParameter.tCS5463Calib.unAC_V_Offset;
+}
+
+uint32 DAT_unGetDC_V_Offset(void)
+{
+	return tSmartSocketParameter.tCS5463Calib.unDC_V_Offset;
+}
+
+uint32 DAT_unGetAC_I_Offset(void)
+{
+	return tSmartSocketParameter.tCS5463Calib.unAC_I_Offset;
+}
+
+uint32 DAT_unGetDC_I_Offset(void)
+{
+	return tSmartSocketParameter.tCS5463Calib.unDC_I_Offset;
+}
+
+uint32 DAT_unGetV_Gain(void)
+{
+	return tSmartSocketParameter.tCS5463Calib.unV_Gain;
+}
+
+uint32 DAT_unGetI_Gain(void)
+{
+	return tSmartSocketParameter.tCS5463Calib.unI_Gain;
+}
+
+void DAT_unSetCalib(bool bCalib)
+{
+	tSmartSocketParameter.tConfigure.bCS5463Cali = bCalib;
+}
+
+void DAT_unSetAC_V_Offset(uint32 unAC_V_Offset)
+{
+	tSmartSocketParameter.tCS5463Calib.unAC_V_Offset = unAC_V_Offset;
+}
+
+void DAT_unSetDC_V_Offset(uint32 unDC_V_Offset)
+{
+	tSmartSocketParameter.tCS5463Calib.unDC_V_Offset = unDC_V_Offset;
+}
+
+void DAT_unSetAC_I_Offset(uint32 unAC_I_Offset)
+{
+	tSmartSocketParameter.tCS5463Calib.unAC_I_Offset = unAC_I_Offset;
+}
+
+void DAT_unSetDC_I_Offset(uint32 unDC_I_Offset)
+{
+	tSmartSocketParameter.tCS5463Calib.unDC_I_Offset = unDC_I_Offset;
+}
+
+void DAT_unSetV_Gain(uint32 unV_Gain)
+{
+	tSmartSocketParameter.tCS5463Calib.unV_Gain = unV_Gain;
+}
+
+void DAT_unSetI_Gain(uint32 unI_Gain)
+{
+	tSmartSocketParameter.tCS5463Calib.unI_Gain = unI_Gain;
+}
+
 float DAT_fGetIMax(void)
 {
 	return tSmartSocketParameter.tCS5463Calib.fI_Max;
@@ -58,6 +128,7 @@ int32_t DAT_nFlashDataClean(void)
 		memcpy(tSmartSocketParameter.sSNTP_Server[0], "cn.pool.ntp.org", sizeof("cn.pool.ntp.org"));
 		memcpy(tSmartSocketParameter.sSNTP_Server[1], "asia.pool.ntp.org", sizeof("asia.pool.ntp.org"));
 		memcpy(tSmartSocketParameter.sSNTP_Server[2], "pool.ntp.org", sizeof("pool.ntp.org"));
+		memcpy(tSmartSocketParameter.sFW_UpgradeUrl, "http://www.zulolo.cn", sizeof("http://www.zulolo.cn"));
 		system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 							&tSmartSocketParameter, sizeof(tSmartSocketParameter));
 		xSemaphoreGive(xSmartSocketParameterSemaphore);
