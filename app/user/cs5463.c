@@ -262,8 +262,8 @@ void initCS5463(void)
 	CS5463IF_WriteReg(CS5463_CMD_WR_CONFIG, unPara, sizeof(unPara));
 
 	unPara[0] = 0;
-	unPara[1] = 0x0F;
-	unPara[2] = 0xA0;
+	unPara[1] = 0x03;
+	unPara[2] = 0x20;
 	CS5463IF_WriteReg(CS5463_CMD_WR_CYCLE_COUNT, unPara, sizeof(unPara));
 
 	unPara[0] = 0;
@@ -717,7 +717,7 @@ float CS5463_fGetV_RMS(void)
 	fResult = fConvert24BitToFloat(unCS5463_V_RMS);//(unCS5463_V_RMS);
 	fResult = (fResult * DAT_fGetVMax()) / 0.6 ;
 
-    return ((int32_t)fResult);
+    return fResult;
 }
 
 float CS5463_fGetActivePower(void)

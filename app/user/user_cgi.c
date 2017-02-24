@@ -108,8 +108,8 @@ system_info_get(cJSON *pcjson, const char* pname )
 
     cJSON_AddStringToObject(pSubJson_Version,"hardware","0.3");
     cJSON_AddStringToObject(pSubJson_Version,"sdk_version",system_get_sdk_version());
-    sprintf(buff,"%s%d.%d.%d %s %d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
-    IOT_VERSION_MINOR, IOT_VERSION_REVISION, __TIME__, device_type, UPGRADE_FALG);
+    sprintf(buff,"%s%d.%d.%d %s %s %d(%s)",VERSION_TYPE,IOT_VERSION_MAJOR,\
+    IOT_VERSION_MINOR, IOT_VERSION_REVISION, __DATE__, __TIME__, device_type, UPGRADE_FALG);
     cJSON_AddStringToObject(pSubJson_Version,"iot_version",buff);
     
     cJSON_AddStringToObject(pSubJson_Device,"manufacture","Ming zhi hai mei qi hao");
