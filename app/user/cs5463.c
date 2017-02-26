@@ -240,8 +240,8 @@ void trend_record_callback(void *arg)
 {
 	TrendContent_t tValue;
 	tValue.fTemperature = fCS5463_T;
-//	tValue.unI_RMS = (unCS5463_I_RMS[0] << 16) | (unCS5463_I_RMS[1] << 8) | unCS5463_I_RMS[2];
-//	tValue.unV_RMS = (unCS5463_V_RMS[0] << 16) | (unCS5463_V_RMS[1] << 8) | unCS5463_V_RMS[2];
+	tValue.unI_RMS = (unCS5463_I_RMS[0] << 16) | (unCS5463_I_RMS[1] << 8) | unCS5463_I_RMS[2];
+	tValue.unV_RMS = (unCS5463_V_RMS[0] << 16) | (unCS5463_V_RMS[1] << 8) | unCS5463_V_RMS[2];
 //	tValue.unActivePower = unCS5463_P;
 	tValue.unTime = sntp_get_current_timestamp();
     DAT_bTrendRecordAdd(tValue);
@@ -392,7 +392,8 @@ int32_t CS5463IF_Calib(void)
 	uint8_t unPara[3];
 	tCaliState = CS5463_CALI_STATE_WAITING_START;
 	DAT_unSetCalib(true);
-
+	CS5463IF_TrendEnable(false);
+	CS5463IF_ProtectEnable(false);
 //	memset(&(tSmartSocketParameter.tCS5463Valid), 0, sizeof(tSmartSocketParameter.tCS5463Valid));
 	user_plug_set_status(PLUG_STATUS_OPEN);
 	user_relay_led_output(LED_1HZ);
@@ -467,7 +468,7 @@ int32_t CS5463IF_Calib(void)
 			vTaskDelay(20/portTICK_RATE_MS);
 
 			user_plug_set_status(PLUG_STATUS_CLOSE);
-			vTaskDelay(500/portTICK_RATE_MS);
+			vTaskDelay(2000/portTICK_RATE_MS);
 			unPara[0] = 0x40;
 			unPara[1] = 0;
 			unPara[2] = 0;
@@ -576,7 +577,7 @@ int32_t CS5463IF_Calib(void)
 			vTaskDelay(20/portTICK_RATE_MS);
 
 			user_plug_set_status(PLUG_STATUS_CLOSE);
-			vTaskDelay(500/portTICK_RATE_MS);
+			vTaskDelay(2000/portTICK_RATE_MS);
 			unPara[0] = 0x40;
 			unPara[1] = 0;
 			unPara[2] = 0;
@@ -661,6 +662,28 @@ int32_t CS5463IF_Calib(void)
 	return 0;
 }
 
+void CS5463IF_TrendEnable(bool bEnable)
+{
+	if (true == bEnable){
+	    os_timer_disarm(&tTrendRecord);
+	    os_timer_setfn(&tTrendRecord, trend_record_callback , NULL);
+	    os_timer_arm(&tTrendRecord, TREND_RECORD_INTERVAL, 1);
+	}else{
+		os_timer_disarm(&tTrendRecord);
+	}
+}
+
+void CS5463IF_ProtectEnable(bool bEnable)
+{
+	if (true == tSmartSocketParameter.tConfigure.bCurrentPrtctEnable){
+		os_timer_disarm(&tCheckCurrentTimer);
+		os_timer_setfn(&tCheckCurrentTimer, (os_timer_func_t *)check_current_timer_cb, NULL);
+		os_timer_arm(&tCheckCurrentTimer, 1000, 1);
+	}else{
+		os_timer_disarm(&tCheckCurrentTimer);
+	}
+}
+
 void CS5463IF_Routine(void)
 {
 	uint8_t unCS5463Data[3];	//[] = {CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1, CS5463_CMD_SYNC_1};
@@ -678,13 +701,8 @@ void CS5463IF_Routine(void)
 	writeCS5463Calib();
 	CS5463IF_WriteCmd(CS5463_CMD_START_CNTN_CNVS);
 
-    os_timer_disarm(&tTrendRecord);
-    os_timer_setfn(&tTrendRecord, trend_record_callback , NULL);
-    os_timer_arm(&tTrendRecord, TREND_RECORD_INTERVAL, 1);
-
-    os_timer_disarm(&tCheckCurrentTimer);
-    os_timer_setfn(&tCheckCurrentTimer, (os_timer_func_t *)check_current_timer_cb, NULL);
-    os_timer_arm(&tCheckCurrentTimer, 1000, 1);
+	CS5463IF_TrendEnable(tSmartSocketParameter.tConfigure.bTrendEnable);
+	CS5463IF_ProtectEnable(tSmartSocketParameter.tConfigure.bCurrentPrtctEnable);
 
 	while(1){
 		// Temperature

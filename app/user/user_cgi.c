@@ -449,6 +449,159 @@ event_history_get(cJSON *pcjson, const char* pname )
 }
 
 /******************************************************************************
+ * FunctionName : trend_enable_get
+ * Description  : get if trend record is enabled or not
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{"enable":0}}
+*******************************************************************************/
+LOCAL int
+trend_enable_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response create fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "enable", tSmartSocketParameter.tConfigure.bTrendEnable);
+
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : trend_enable_set
+ * Description  : enable or disable trend record
+ * Parameters   : pcjson -- A pointer to a JSON formatted string
+ * Returns      : result
+ {"set":{"enable":1 }}
+*******************************************************************************/
+LOCAL int
+trend_enable_set(const char *pValue)
+{
+    cJSON * pJsonSub=NULL;
+    cJSON * pJsonSub_enable=NULL;
+
+    cJSON * pJson = cJSON_Parse(pValue);
+
+    if(NULL == pJson){
+        printf("pJson create fail\n");
+        return (-1);
+    }
+
+    pJsonSub = cJSON_GetObjectItem(pJson, "set");
+    if(NULL == pJsonSub){
+    	printf("cJSON_GetObjectItem fail\n");
+    	cJSON_Delete(pJson);
+    	return (-1);
+    }
+
+    pJsonSub_enable = cJSON_GetObjectItem(pJsonSub, "enable");
+    if(NULL == pJsonSub_enable){
+    	printf("pJsonSub_enable fail\n");
+    	cJSON_Delete(pJson);
+    	return (-1);
+    }
+	if(pJsonSub_enable->type == cJSON_Number){
+		tSmartSocketParameter.tConfigure.bTrendEnable = pJsonSub_enable->valueint;
+		cJSON_Delete(pJson);
+
+		if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
+			system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+								&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+			xSemaphoreGive(xSmartSocketParameterSemaphore);
+			CS5463IF_TrendEnable(tSmartSocketParameter.tConfigure.bTrendEnable);
+		}else{
+			printf("Take parameter semaphore failed.\n");
+			return (-1);
+		}
+		return 0;
+	}else{
+	    cJSON_Delete(pJson);
+	    printf("trend_enable_set fail\n");
+	    return (-1);
+	}
+}
+
+/******************************************************************************
+ * FunctionName : protect_enable_get
+ * Description  : get if over current protection is enabled or not
+ * Parameters   : pcjson -- A pointer to a JSON object
+ * Returns      : result
+{"response":{"enable":0}}
+*******************************************************************************/
+LOCAL int
+protect_enable_get(cJSON *pcjson, const char* pname )
+{
+    cJSON * pSubJson_response = cJSON_CreateObject();
+    if(NULL == pSubJson_response){
+        printf("pSubJson_response create fail\n");
+        return (-1);
+    }
+    cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
+
+    cJSON_AddNumberToObject(pSubJson_response, "enable", tSmartSocketParameter.tConfigure.bCurrentPrtctEnable);
+
+    return 0;
+}
+
+/******************************************************************************
+ * FunctionName : protect_enable_set
+ * Description  : enable or disable over current protection
+ * Parameters   : pcjson -- A pointer to a JSON formatted string
+ * Returns      : result
+ {"set":{"enable":1 }}
+*******************************************************************************/
+LOCAL int
+protect_enable_set(const char *pValue)
+{
+    cJSON * pJsonSub=NULL;
+    cJSON * pJsonSub_enable=NULL;
+
+    cJSON * pJson = cJSON_Parse(pValue);
+
+    if(NULL == pJson){
+        printf("pJson create fail\n");
+        return (-1);
+    }
+
+    pJsonSub = cJSON_GetObjectItem(pJson, "set");
+    if(NULL == pJsonSub){
+    	printf("cJSON_GetObjectItem fail\n");
+    	cJSON_Delete(pJson);
+    	return (-1);
+    }
+
+    pJsonSub_enable = cJSON_GetObjectItem(pJsonSub, "enable");
+    if(NULL == pJsonSub_enable){
+    	printf("pJsonSub_enable fail\n");
+    	cJSON_Delete(pJson);
+    	return (-1);
+    }
+	if(pJsonSub_enable->type == cJSON_Number){
+		tSmartSocketParameter.tConfigure.bCurrentPrtctEnable = pJsonSub_enable->valueint;
+		cJSON_Delete(pJson);
+
+		if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE ){
+			system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
+								&tSmartSocketParameter, sizeof(tSmartSocketParameter));
+			xSemaphoreGive(xSmartSocketParameterSemaphore);
+			CS5463IF_ProtectEnable(tSmartSocketParameter.tConfigure.bCurrentPrtctEnable);
+		}else{
+			printf("Take parameter semaphore failed.\n");
+			return (-1);
+		}
+		return 0;
+	}else{
+	    cJSON_Delete(pJson);
+	    printf("protect_enable_set fail\n");
+	    return (-1);
+	}
+}
+
+
+/******************************************************************************
  * FunctionName : manual_enable_get
  * Description  : get if button control relay is enabled or not
  * Parameters   : pcjson -- A pointer to a JSON object
@@ -518,7 +671,7 @@ manual_enable_set(const char *pValue)
 		return 0;
 	}else{
 	    cJSON_Delete(pJson);
-	    printf("switch_status_set fail\n");
+	    printf("manual_enable_set fail\n");
 	    return (-1);
 	}
 }
@@ -596,27 +749,33 @@ switch_status_set(const char *pValue)
 {
     cJSON * pJsonSub=NULL;
     cJSON * pJsonSubStatus=NULL;
-    cJSON * pJson =  cJSON_Parse(pValue);
+    cJSON * pJson = NULL;
 
-    if(NULL != pJson){
-        pJsonSub = cJSON_GetObjectItem(pJson, "Response");
-    }
-    
-    if(NULL != pJsonSub){
-    	pJsonSubStatus = cJSON_GetObjectItem(pJsonSub, "status");
-    }
-    
-    if(NULL != pJsonSubStatus){
-        if(pJsonSubStatus->type == cJSON_Number){
-            user_plug_set_status(pJsonSubStatus->valueint);
-            if(NULL != pJson)cJSON_Delete(pJson);
-            return 0;
-        }
-    }
-    
-    if(NULL != pJson)cJSON_Delete(pJson);
-    printf("switch_status_set fail\n");
-    return (-1);
+	if (true == tSmartSocketParameter.tConfigure.bCS5463Cali){
+	    printf("Can not set switch status during calib\n");
+	    return (-1);
+	}else{
+		pJson = cJSON_Parse(pValue);
+	    if(NULL != pJson){
+	        pJsonSub = cJSON_GetObjectItem(pJson, "Response");
+	    }
+
+	    if(NULL != pJsonSub){
+	    	pJsonSubStatus = cJSON_GetObjectItem(pJsonSub, "status");
+	    }
+
+	    if(NULL != pJsonSubStatus){
+	        if(pJsonSubStatus->type == cJSON_Number){
+	            user_plug_set_status(pJsonSubStatus->valueint);
+	            if(NULL != pJson)cJSON_Delete(pJson);
+	            return 0;
+	        }
+	    }
+
+	    if(NULL != pJson)cJSON_Delete(pJson);
+	    printf("switch_status_set fail\n");
+	    return (-1);
+	}
 }
 
 
@@ -1564,7 +1723,16 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"config", "debug", NULL, debug_smart_config},
 	{"config", "schedule", relay_schedule_get, relay_schedule_set},
 	{"config", "threshold", current_threshold_get, current_threshold_set},
+	{"config", "trendenable", trend_enable_get, trend_enable_set},
+	{"config", "protectenable", protect_enable_get, protect_enable_set},
 	{"config", "sntp", sntp_get, sntp_set},
+	{"config", "calib", cs5463_calib_get,cs5463_calib_set},
+    {"config", "wifi", wifi_info_get,wifi_info_set},
+    {"config", "reset", NULL,system_status_reset},
+    {"config", "reboot", NULL,user_set_reboot},
+    {"client", "status", connect_status_get, NULL},
+	{"client", "meterstatus", meter_status_get, NULL},
+    {"client", "info",  system_info_get, NULL},
 	{"client", "updateurl", update_url_get, NULL},
 	{"client", "rssi", signal_strength_get,NULL},
 	{"client", "current", current_value_get,NULL},
@@ -1573,14 +1741,6 @@ const EspCgiApiEnt espCgiApiNodes[]={
 	{"client", "temperature", temperature_value_get,NULL},
 	{"client", "trend", trend_get,NULL},
 	{"client", "event", event_history_get,NULL},
-	{"config", "calib", cs5463_calib_get,cs5463_calib_set},
-    {"config", "reboot", NULL,user_set_reboot},
-    {"config", "wifi", wifi_info_get,wifi_info_set},
-//    {"client", "scan",  scan_info_get, NULL},
-    {"client", "status", connect_status_get, NULL},
-	{"client", "meterstatus", meter_status_get, NULL},
-    {"config", "reset", NULL,system_status_reset},
-    {"client", "info",  system_info_get, NULL},
 	{"upgrade", "getstatus", upgrade_status_get, NULL},
     {"upgrade", "getuser", user_binfo_get, NULL},
     {"upgrade", "start", NULL, user_upgrade_start},

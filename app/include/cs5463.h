@@ -72,6 +72,7 @@ float CS5463_fGetI_RMS(void);
 float CS5463_fGetV_RMS(void);
 float CS5463_fGetActivePower(void);
 float CS5463_fGetTemperature(void);
-
+void CS5463IF_ProtectEnable(bool bEnable);
+void CS5463IF_TrendEnable(bool bEnable);
 
 #endif /* APP_INCLUDE_CS5463_H_ */

@@ -130,7 +130,8 @@ typedef struct SmartSocketParameter{
 		uint32 bJustLongPressed : 1;
 		uint32 bFWUpgradeReset : 1;
 		uint32 bCS5463Cali : 1;
-		uint32 unused : 25;
+		uint32 bCurrentPrtctEnable : 1;
+		uint32 unused : 24;
 	}tConfigure;
 	char sSNTP_Server[MAX_SNTP_SERVER_NUM][MAX_SNTP_SERVER_ADDR_LEN];
 	char sFW_UpgradeServer[MAX_UPDATE_SERVER_ADDR_LEN];

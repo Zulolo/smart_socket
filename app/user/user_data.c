@@ -122,6 +122,8 @@ int32_t DAT_nFlashDataClean(void)
 		tSmartSocketParameter.tCS5463Calib.fV_Max = 225;
 		tSmartSocketParameter.tConfigure.bButtonRelayEnable = 1;
 		tSmartSocketParameter.tConfigure.bSNTPEnable = 1;
+		tSmartSocketParameter.tConfigure.bTrendEnable = 0;
+		tSmartSocketParameter.tConfigure.bCurrentPrtctEnable = 0;
 //		tSmartSocketParameter.tConfigure.bRelayScheduleEnable = 0;
 		tSmartSocketParameter.unFW_UpgradePort = 80;
 		tSmartSocketParameter.fCurrentThreshold = 9.8;
