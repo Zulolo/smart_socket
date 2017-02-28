@@ -159,6 +159,7 @@ LOCAL int
 current_value_get(cJSON *pcjson, const char* pname )
 {
     cJSON * pSubJson_response = cJSON_CreateObject();
+    float fI_RMS;
 
     if(NULL == pSubJson_response){
         printf("pSubJson_response create fail\n");
@@ -166,8 +167,9 @@ current_value_get(cJSON *pcjson, const char* pname )
     }
 
     cJSON_AddItemToObject(pcjson, "response", pSubJson_response);
-
-    cJSON_AddNumberToObject(pSubJson_response, "current", (int32_t)(CS5463_fGetI_RMS() * 1000));
+    fI_RMS = CS5463_fGetI_RMS() * 1000;
+    fI_RMS = (fI_RMS > 10)?(fI_RMS):(0);
+    cJSON_AddNumberToObject(pSubJson_response, "current", (int32_t)fI_RMS);
     cJSON_AddStringToObject(pSubJson_response, "unit", "mA");
     return 0;
 }
