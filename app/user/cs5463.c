@@ -639,6 +639,7 @@ int32_t CS5463IF_Calib(void)
 
 		case CS5463_CALI_STATE_RESET:
 			tSmartSocketParameter.tCS5463Calib.unValidation = 0xA5A5A5A5;
+			DAT_unSetCalib(false);
 			if(xSemaphoreTake(xSmartSocketParameterSemaphore, (portTickType)(10000/portTICK_RATE_MS)) == pdTRUE){
 				system_param_save_with_protect(GET_USER_DATA_SECTORE(USER_DATA_CONF_PARA),
 									&tSmartSocketParameter, sizeof(tSmartSocketParameter));
