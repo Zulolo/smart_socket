@@ -143,6 +143,7 @@ user_platform_timer_first_start(uint16 count)
         pTimerWaitParam = (struct esp_platform_wait_timer_param *)zalloc(sizeof(struct esp_platform_wait_timer_param)*TIMER_NUMBER);
     }
     pt_w_p = pTimerWaitParam;
+    memset(pt_w_p, 0, sizeof(struct esp_platform_wait_timer_param)*TIMER_NUMBER);
     
     //update timestamp base
     tTimerParam.unTimestamp = tTimerParam.unTimestamp + unMinWaitSecond;
@@ -284,25 +285,26 @@ user_esp_platform_device_action(struct wait_param *pwait_action)
 void  
 user_esp_platform_wait_time_overflow_check(struct wait_param *pwait_action)
 {
-    TM_DEBUG("min_wait_second = %d", pwait_action->min_time_backup);
-    static bool bOvflwChkDcrsScnd = false;
+    TM_DEBUG("min_wait_second = %d\n", pwait_action->min_time_backup);
+//    static bool bOvflwChkDcrsScnd = false;
 
-    if(bOvflwChkDcrsScnd != false){
-        pwait_action->min_time_backup -= 3600;
-    }
+//    if(bOvflwChkDcrsScnd != false){
+//        pwait_action->min_time_backup -= 3600;
+//    }
 
     if (pwait_action->min_time_backup >= 3600) {
+    	pwait_action->min_time_backup -= 3600;
         os_timer_disarm(&tSchedulingTimer);
         os_timer_setfn(&tSchedulingTimer, (os_timer_func_t *)user_esp_platform_wait_time_overflow_check, pwait_action);
         os_timer_arm(&tSchedulingTimer, 3600000, 0);
         TM_DEBUG("min_wait_second is extended\n");
-        bOvflwChkDcrsScnd = true;
+//        bOvflwChkDcrsScnd = true;
     } else {
         os_timer_disarm(&tSchedulingTimer);
         os_timer_setfn(&tSchedulingTimer, (os_timer_func_t *)user_esp_platform_device_action, pwait_action);
         os_timer_arm(&tSchedulingTimer, pwait_action->min_time_backup * 1000, 0);
         TM_DEBUG("min_wait_second is = %dms\n", pwait_action->min_time_backup * 1000);
-        bOvflwChkDcrsScnd = false;
+//        bOvflwChkDcrsScnd = false;
     }
 }
 
