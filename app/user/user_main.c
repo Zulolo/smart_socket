@@ -8,7 +8,7 @@
  * Modification history:
  * 2015/7/1, v1.0 create this file.
 *******************************************************************************/
-//git test
+//git test2
 #include "esp_common.h"
 
 #include "freertos/FreeRTOS.h"
