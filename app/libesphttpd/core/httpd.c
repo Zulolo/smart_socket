@@ -351,7 +351,7 @@ int   httpdSend(HttpdConnData *conn, const char *data, int len) {
 static void   xmitSendBuff(HttpdConnData *conn) {
     if (conn->priv->sendBuffLen!=0) {
         write(conn->conn->sockfd,(uint8_t*)conn->priv->sendBuff, conn->priv->sendBuffLen);
-        printf("xmit %dB\n",conn->priv->sendBuffLen);
+//        printf("xmit %dB\n",conn->priv->sendBuffLen);
         conn->priv->sendBuffLen=0;
     }
 }
@@ -648,10 +648,9 @@ LOCAL void httpserver_task(void *pvParameters)
             if (connData[index].conn!=NULL) {
                 if(connData[index].conn->sockfd >= 0){
                     FD_SET(connData[index].conn->sockfd, &readset);
-                    printf("Add index %d, sockfd %d to read select\n",index, connData[index].conn->sockfd);
                     if(connData[index].cgi != NULL || connData[index].destruct_flg==TRUE) {
                         FD_SET(connData[index].conn->sockfd, &writeset);
-                        printf("Add index %d, sockfd %d to write select\n",index, connData[index].conn->sockfd);
+                        //printf("index %d, sockfd %d to wselect\n",index, connData[index].conn->sockfd);
                     }else{
                         printf("index %d, sockfd %d, dummy?\n",index, connData[index].conn->sockfd);
                     }
@@ -665,9 +664,9 @@ LOCAL void httpserver_task(void *pvParameters)
         //polling all exist client handle,wait until readable/writable
         ret = select(maxfdp+1, &readset, &writeset, NULL, NULL);//&timeout
         if(ret > 0){
-        	printf("Select found resource available.\n");
+
             if (FD_ISSET(listenfd, &readset)){
-            	printf("New connection.\n");
+
                 len = sizeof(struct sockaddr_in);
                 remotefd = accept(listenfd, (struct sockaddr *)&remote_addr, (socklen_t *)&len);
                 if(remotefd != -1) {
@@ -678,6 +677,7 @@ LOCAL void httpserver_task(void *pvParameters)
                     }
             
                     if(index < MAX_CONN){
+
                         int keepAlive = 1; //enable keepalive
                         int keepIdle = 60; //60s
                         int keepInterval = 5; //5s
@@ -718,21 +718,29 @@ LOCAL void httpserver_task(void *pvParameters)
                     }
         
                 }else{
-                    printf("httpserver accept error: %d, WARNING!\n",remotefd);
+                    printf("http client error: %d, WARNING!\n",remotefd);
                 }
             }
             
             for(index=0; index < MAX_CONN; index++){
+
                 /* IF this handle there is data/event aviliable, recive it*/
                 if (connData[index].conn == NULL) continue;
                 if (FD_ISSET(connData[index].conn->sockfd, &readset)){
-                	printf("New read available for sockfd %d.\n", connData[index].conn->sockfd);
+
                     /*stop the sock handle watchout timer */
                     os_timer_disarm((os_timer_t *)&connData[index].conn->stop_watch);
                     memset(precvbuf, 0, RECV_BUF_SIZE);
 
                     ret=recv(connData[index].conn->sockfd,precvbuf,RECV_BUF_SIZE,0);
                     if(ret > 0){
+/*
+                        struct sockaddr name;
+                        struct sockaddr_in *piname;
+                        int len = sizeof(name);
+                        getpeername(pconnections->single_conn[index]->sock_fd, &name, (socklen_t *)&len);
+                        piname  = (struct sockaddr_in *)&name;
+*/
                         printf("readable recv sockfd %d len=%d \n",connData[index].conn->sockfd,ret);
                         httpdRecv(connData[index].conn,precvbuf,ret);
 
@@ -753,7 +761,6 @@ LOCAL void httpserver_task(void *pvParameters)
                 
                 if (connData[index].conn == NULL) continue;
                 if(FD_ISSET(connData[index].conn->sockfd, &writeset)){
-                	printf("New write available for sockfd %d.\n", connData[index].conn->sockfd);
                     /*stop the sock handle watchout timer */
                     os_timer_disarm((os_timer_t *)&connData[index].conn->stop_watch);
                     memset(precvbuf, 0, RECV_BUF_SIZE);
@@ -862,4 +869,3 @@ void   httpdInit(HttpdBuiltInUrl *fixedUrls, int port)
     
     xTaskCreate(httpserver_task, (const signed char *)"httpdserver", 1120, NULL, 4, NULL);
 }
-
