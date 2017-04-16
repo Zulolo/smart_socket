@@ -652,7 +652,7 @@ LOCAL void httpserver_task(void *pvParameters)
                         FD_SET(connData[index].conn->sockfd, &writeset);
                         //printf("index %d, sockfd %d to wselect\n",index, connData[index].conn->sockfd);
                     }else{
-                        printf("index %d, sockfd %d, dummy?\n",index, connData[index].conn->sockfd);
+//                        printf("index %d, sockfd %d, dummy?\n",index, connData[index].conn->sockfd);
                     }
                     maxfdp = max(connData[index].conn->sockfd, maxfdp);
         }}}
@@ -711,7 +711,7 @@ LOCAL void httpserver_task(void *pvParameters)
                         os_timer_disarm(&connData[index].conn->stop_watch);
                         os_timer_setfn(&connData[index].conn->stop_watch, (os_timer_func_t *)httpserver_conn_watcher, connData[index].conn);
                         os_timer_arm(&connData[index].conn->stop_watch, STOP_TIMER, 0);
-                        printf("httpserver acpt index:%d sockfd %d!\n",index,remotefd);
+//                        printf("httpserver acpt index:%d sockfd %d!\n",index,remotefd);
                     }else{
                         close(remotefd);
                         printf("httpserver overflow close %d!\n",remotefd);
@@ -741,7 +741,7 @@ LOCAL void httpserver_task(void *pvParameters)
                         getpeername(pconnections->single_conn[index]->sock_fd, &name, (socklen_t *)&len);
                         piname  = (struct sockaddr_in *)&name;
 */
-                        printf("readable recv sockfd %d len=%d \n",connData[index].conn->sockfd,ret);
+//                        printf("readable recv sockfd %d len=%d \n",connData[index].conn->sockfd,ret);
                         httpdRecv(connData[index].conn,precvbuf,ret);
 
                         /*restart the sock handle watchout timer */
@@ -749,7 +749,7 @@ LOCAL void httpserver_task(void *pvParameters)
                         os_timer_arm((os_timer_t *)&connData[index].conn->stop_watch, STOP_TIMER, 0);
                     }else{
                         //recv error,connection close
-                        printf("readable recv sockfd %d ret=%d, close\n",connData[index].conn->sockfd,ret);
+//                        printf("readable recv sockfd %d ret=%d, close\n",connData[index].conn->sockfd,ret);
                         close(connData[index].conn->sockfd);
                         connData[index].conn->sockfd = -1;
                         connData[index].conn = NULL;// flag for cgi flush data
@@ -769,7 +769,7 @@ LOCAL void httpserver_task(void *pvParameters)
                     connData[index].priv->sendBuffLen=0;
 
                     if (connData[index].destruct_flg==TRUE) { //Marked for destruction
-                        printf("httpserver destruction close sockfd %d\n", connData[index].conn->sockfd);
+//                        printf("httpserver destruction close sockfd %d\n", connData[index].conn->sockfd);
                         close(connData[index].conn->sockfd);
                         connData[index].conn->sockfd = -1;
                         httpdRetireConn(&connData[index]);
@@ -794,11 +794,11 @@ LOCAL void httpserver_task(void *pvParameters)
                 }
             }
         } else {
-        	printf("Select result %d with errno:%d\n", ret, errno);
+//        	printf("Select result %d with errno:%d\n", ret, errno);
         	for(index=0; index < MAX_CONN; index++){
                 /* IF this handle there is no data/event aviliable, check the status*/
                 if(connData[index].conn != NULL){
-                    printf("httpserver close sockfd %d for select error!\n",connData[index].conn->sockfd);
+//                    printf("httpserver close sockfd %d for select error!\n",connData[index].conn->sockfd);
                     close(connData[index].conn->sockfd);
                     connData[index].conn->sockfd = -1;
                     connData[index].conn = NULL; //mark for destruction.
@@ -810,7 +810,7 @@ LOCAL void httpserver_task(void *pvParameters)
     	for(index=0; index < MAX_CONN; index++){
             /* IF this handle there is no data/event aviliable, check the status*/
             if((connData[index].conn != NULL) && (connData[index].conn->timeout == 1)){
-                printf("httpserver close sockfd %d for timeout!\n",connData[index].conn->sockfd);
+//                printf("httpserver close sockfd %d for timeout!\n",connData[index].conn->sockfd);
                 close(connData[index].conn->sockfd);
                 connData[index].conn->sockfd = -1;
                 connData[index].conn = NULL; //mark for destruction.
@@ -823,7 +823,7 @@ LOCAL void httpserver_task(void *pvParameters)
     	}
 #if 1        
         /*for develop test only*/
-        printf("httpserver_task %d words, heap %d bytes\n",(int)uxTaskGetStackHighWaterMark(NULL), system_get_free_heap_size());
+//        printf("httpserver_task %d words, heap %d bytes\n",(int)uxTaskGetStackHighWaterMark(NULL), system_get_free_heap_size());
 #endif
 
     }
