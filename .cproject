@@ -24,8 +24,15 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.1622959415" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler">
 								<option id="gnu.c.compiler.option.include.paths.1993901732" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/smart_socket/app/include}&quot;"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/include/lwip"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/include/freertos"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/include/json"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/include/espressif"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/extra_include/xtensa"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/include"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/driver_lib/include"/>
 								</option>
-								<option id="gnu.c.compiler.option.preprocessor.def.symbols.748643772" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.748643772" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1088192219" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.180011117" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler"/>
