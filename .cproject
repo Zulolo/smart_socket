@@ -31,6 +31,7 @@
 									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/extra_include/xtensa"/>
 									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/include"/>
 									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/driver_lib/include"/>
+									<listOptionValue builtIn="false" value="/home/zulolo/ESP8266_RTOS_SDK/include/nopoll"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.748643772" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1088192219" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>

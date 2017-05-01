@@ -22,6 +22,8 @@
 #include "lwip/lwip/err.h"
 #include "lwip/apps/sntp.h"
 
+#include "nopoll/nopoll.h"
+
 #include "user_iot_version.h"
 #include "smartconfig.h"
 
@@ -429,6 +431,9 @@ user_esp_platform_maintainer(void *pvParameters)
 {
     int ret;
     struct station_config *sta_config;
+    noPollCtx* pNopollCtx;
+    noPollConn* pNopollConn;
+    char cNopollUserData[2048];
 
     user_esp_platform_param_recover();
 
@@ -460,18 +465,43 @@ user_esp_platform_maintainer(void *pvParameters)
 
 	PLTF_startSBTP();
 
-    while(1){
-    	// Internet functions will be located here to connect to server and listening
-    	// if there is any command like relay status change, upgrade or timer update
-    	// even if you are not in local network with smart plug
+	pNopollCtx = nopoll_ctx_new();
+	if (! pNopollCtx) {
+	    // error some handling code here
+		ESP_DBG("Get nopoll context failed.\n");
+	    while(1){
+	    	vTaskDelay(5000/portTICK_RATE_MS);
+	    }
+	} else {
+		pNopollConn = nopoll_conn_new(pNopollCtx, "iot.zulolo.cn", "80", NULL, NULL, NULL, NULL);
+		if (! nopoll_conn_is_ok(pNopollConn)){
+		    // some error handling here
+			ESP_DBG("Connect to websocket server failed.\n");
+		    while(1){
+		    	vTaskDelay(5000/portTICK_RATE_MS);
+		    }
+		} else {
+			if (! nopoll_conn_wait_until_connection_ready(pNopollConn, 5)) {
+			        // some error handling
+				ESP_DBG("Wait websocket connect ready failed.\n");
+			    while(1){
+			    	vTaskDelay(5000/portTICK_RATE_MS);
+			    }
+			} else {
+			    while(1){
+			    	// Internet functions will be located here to connect to server and listening
+			    	// if there is any command like relay status change, upgrade or timer update
+			    	// even if you are not in local network with smart plug
+			    	if (nopoll_conn_read(pNopollConn, cNopollUserData, sizeof(cNopollUserData), nopoll_true, 1000) < 0) {
+			    	        // send a message
+			    	}
+			    }
+			}
 
-//    	if ((1 == tSmartSocketParameter.tConfigure.bRelayScheduleEnable) &&
-//    			(0 == tSmartSocketParameter.tConfigure.bCurrentFailed)){
-//    		user_plug_relay_schedule_action(sntp_get_current_timestamp());
-//    	}
+		}
+	}
 
-    	vTaskDelay(5000/portTICK_RATE_MS);
-    }
+	nopoll_ctx_unref(pNopollCtx);
     printf("user_esp_platform_maintainer task end.\n");
     vTaskDelete(NULL);
 

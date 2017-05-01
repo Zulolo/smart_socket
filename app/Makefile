@@ -80,13 +80,12 @@ LINKFLAGS_eagle.app.v6 = \
 	-lmain	\
 	-lfreertos	\
 	-llwip	\
+	-lnopoll	\
 	-lssl	\
 	-ljson  \
 	-lsmartconfig \
-	-lpwm \
 	-L./libesphttpd \
 	-lesphttpd \
-	-lwebpages-espfs \
 	$(DEP_LIBS_eagle.app.v6)					\
 	-Wl,--end-group
 

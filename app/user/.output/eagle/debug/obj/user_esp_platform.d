@@ -99,6 +99,23 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_opts.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_decl.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_config.h \
+ /home/zulolo/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/unistd.h \
+ /home/zulolo/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/sys/unistd.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/netdb.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/espressif/esp_libc.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_handlers.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_ctx.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_io.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_conn_opts.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_conn.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_msg.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_log.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_listener.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_loop.h \
  ../include/user_iot_version.h ../include/user_config.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/smartconfig.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/upgrade.h \

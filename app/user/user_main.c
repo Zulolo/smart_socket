@@ -210,7 +210,7 @@ void user_init(void)
 //	captdnsInit();
 
 	/*Initialize espfs containing static webpages*/
-    espFsInit((void*)(webpages_espfs_start));
+//    espFsInit((void*)(webpages_espfs_start));
 
 	/*Initialize webserver*/
 	httpdInit(builtInUrls, 80);
