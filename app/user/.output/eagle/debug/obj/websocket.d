@@ -1,4 +1,4 @@
-.output/eagle/debug/obj/user_esp_platform.o .output/eagle/debug/obj/user_esp_platform.d : user_esp_platform.c \
+.output/eagle/debug/obj/websocket.o .output/eagle/debug/obj/websocket.d : websocket.c \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/esp_common.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/c_types.h \
  /home/zulolo/esp-open-sdk/xtensa-lx106-elf/lib/gcc/xtensa-lx106-elf/4.8.5/include/stdint.h \
@@ -84,28 +84,33 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/spi_flash.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/pwm.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sys.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/arch/sys_arch.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/ip_addr.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_decl.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_config.h \
+ /home/zulolo/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/unistd.h \
+ /home/zulolo/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/include/sys/unistd.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/netdb.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/ipv4/lwip/inet.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sockets.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/ipv6/lwip/inet6.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/multi-threads/sockets_mt.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sockets.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_opts.h \
- ../include/user_iot_version.h ../include/user_config.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/espressif/smartconfig.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/espressif/upgrade.h \
- ../include/user_esp_platform.h ../include/smart_socket_global.h \
- ../include/driver/gpio.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/espressif/esp_libc.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_handlers.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_ctx.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_io.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_conn_opts.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_conn.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_msg.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_log.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_listener.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/nopoll/nopoll_loop.h \
+ ../include/smart_socket_global.h ../include/driver/gpio.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_time.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/timers.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/err.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sys.h \
- ../include/user_plug.h ../include/driver/key.h ../include/driver/gpio.h \
- ../include/smart_socket_global.h
+ /home/zulolo/ESP8266_RTOS_SDK/include/lwip/arch/sys_arch.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
+ ../include/user_esp_platform.h

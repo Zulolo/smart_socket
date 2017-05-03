@@ -177,6 +177,7 @@ int32_t systemInit(void)
  * Parameters   : none
  * Returns      : none
 *******************************************************************************/
+extern void websocket_start(void);
 void user_init(void)
 {
 	printf("Smart plug daemon start.\n");
@@ -214,6 +215,8 @@ void user_init(void)
 
 	/*Initialize webserver*/
 	httpdInit(builtInUrls, 80);
+
+	websocket_start();
 #endif
 
 }

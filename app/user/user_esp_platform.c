@@ -22,7 +22,7 @@
 #include "lwip/lwip/err.h"
 #include "lwip/apps/sntp.h"
 
-#include "nopoll/nopoll.h"
+//#include "nopoll/nopoll.h"
 
 #include "user_iot_version.h"
 #include "smartconfig.h"
@@ -53,7 +53,7 @@ LOCAL int  user_boot_flag;
 struct esp_platform_saved_param esp_param;
 LOCAL struct rst_info rtc_info;
 LOCAL uint8 iot_version[20];
-LOCAL uint8 device_status;
+LOCAL uint8 device_status = 0;
 LOCAL os_timer_t tCheckSNTPTimer;
 //LOCAL xTaskHandle *ota_task_handle = NULL;
 
@@ -78,6 +78,11 @@ user_esp_platform_get_connect_status(void)
     return status;
 }
 
+uint8
+user_esp_platform_get_device_connect_status(void)
+{
+    return device_status;
+}
 /******************************************************************************
  * FunctionName : user_esp_platform_set_connect_status
  * Description  : set each connection step's status
@@ -420,6 +425,19 @@ void PLTF_startSBTP(void)
     os_timer_setfn(&tCheckSNTPTimer, (os_timer_func_t *)user_check_sntp_stamp, NULL);
     os_timer_arm(&tCheckSNTPTimer, 2000, 0);
 }
+
+//noPollCtx* pCreateNopollCtx (void) {
+//
+//	/* create a context */
+//	noPollCtx * pNopollContext = nopoll_ctx_new ();
+//	nopoll_log_enable(pNopollContext, nopoll_false);
+////	nopoll_log_color_enable(pNopollContext, nopoll_true);
+//
+//	return pNopollContext;
+//}
+//
+//#define LOCAL_TEST_HOST_NAME		"iot.zulolo.cn"
+//#define LOCAL_TEST_HOST_PORT		"80"
 /******************************************************************************
  * FunctionName : user_esp_platform_init
  * Description  : device parame init based on espressif platform
@@ -431,9 +449,11 @@ user_esp_platform_maintainer(void *pvParameters)
 {
     int ret;
     struct station_config *sta_config;
-    noPollCtx* pNopollCtx;
-    noPollConn* pNopollConn;
-    char cNopollUserData[2048];
+//    noPollCtx* pNopollCtx;
+//    noPollConn* pNopollConn;
+//    noPollMsg  * msg;
+//    int          iter;
+//    char cNopollUserData[2048];
 
     user_esp_platform_param_recover();
 
@@ -449,7 +469,7 @@ user_esp_platform_maintainer(void *pvParameters)
 		/*AP_num == 0, no ap cached,start smartcfg*/
 		PLTFM_startSmartConfig();
 
-		while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
+		while(device_status != DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
 			ESP_DBG("Smart configuring...\n");
 			vTaskDelay(2000 / portTICK_RATE_MS);
 		}
@@ -457,51 +477,98 @@ user_esp_platform_maintainer(void *pvParameters)
 	}else{
 		reconnectAP();
 
-		while(device_status < DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
+		while(device_status != DEVICE_GOT_IP){ //tSmartSocketParameter.tConfigure.bIPGotten != 1){
 			ESP_DBG("Connecting...\n");
 			vTaskDelay(2000 / portTICK_RATE_MS);
 		}
 	}
 
+//	printf("Start SNTP.\n");
 	PLTF_startSBTP();
 
-	pNopollCtx = nopoll_ctx_new();
-	if (! pNopollCtx) {
-	    // error some handling code here
-		ESP_DBG("Get nopoll context failed.\n");
-	    while(1){
-	    	vTaskDelay(5000/portTICK_RATE_MS);
-	    }
-	} else {
-		pNopollConn = nopoll_conn_new(pNopollCtx, "iot.zulolo.cn", "80", NULL, NULL, NULL, NULL);
-		if (! nopoll_conn_is_ok(pNopollConn)){
-		    // some error handling here
-			ESP_DBG("Connect to websocket server failed.\n");
-		    while(1){
-		    	vTaskDelay(5000/portTICK_RATE_MS);
-		    }
-		} else {
-			if (! nopoll_conn_wait_until_connection_ready(pNopollConn, 5)) {
-			        // some error handling
-				ESP_DBG("Wait websocket connect ready failed.\n");
-			    while(1){
-			    	vTaskDelay(5000/portTICK_RATE_MS);
-			    }
-			} else {
-			    while(1){
-			    	// Internet functions will be located here to connect to server and listening
-			    	// if there is any command like relay status change, upgrade or timer update
-			    	// even if you are not in local network with smart plug
-			    	if (nopoll_conn_read(pNopollConn, cNopollUserData, sizeof(cNopollUserData), nopoll_true, 1000) < 0) {
-			    	        // send a message
-			    	}
-			    }
-			}
-
-		}
+//	printf("Get nopoll context.\n");
+//	pNopollCtx = pCreateNopollCtx();
+//	if (nopoll_ctx_conns(pNopollCtx) != 0) {
+//		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns(pNopollCtx));
+//	} else {
+//		nopoll_ctx_unref(pNopollCtx);
+//		pNopollCtx = pCreateNopollCtx();
+//		/* call to create a connection */
+//		pNopollConn = nopoll_conn_new (pNopollCtx, LOCAL_TEST_HOST_NAME, LOCAL_TEST_HOST_PORT, NULL, NULL, NULL, NULL);
+//		if (! nopoll_conn_is_ok (pNopollConn)) {
+//			printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
+//					pNopollConn, (int) nopoll_conn_socket (pNopollConn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
+//		} else {
+//			printf ("Receive basic content..\n");
+//			/* wait for the reply */
+//			iter = 0;
+//			while ((msg = nopoll_conn_get_msg (pNopollConn)) == NULL) {
+//				if (! nopoll_conn_is_ok (pNopollConn)) {
+//					printf ("ERROR: received websocket connection close during wait reply..\n");
+//					break;
+//				}
+//				nopoll_sleep (10000);
+//				if (iter > 10)
+//					break;
+//			}
+//			if (msg != NULL){
+//				printf("something was received: %s\n", (const char *) nopoll_msg_get_payload (msg));
+//				nopoll_msg_unref (msg);
+//			}
+//			nopoll_conn_close (pNopollConn);
+//		}
+//	}
+//	nopoll_ctx_unref(pNopollCtx);
+	while (1){
+		vTaskDelay(5000/portTICK_RATE_MS);
 	}
-
-	nopoll_ctx_unref(pNopollCtx);
+//	while (1) {
+//		printf("Get nopoll context.\n");
+//		pNopollCtx = nopoll_ctx_new();
+//		if (! pNopollCtx) {
+//		    // error some handling code here
+//			ESP_DBG("Get nopoll context failed.\n");
+//		    vTaskDelay(5000/portTICK_RATE_MS);
+//		    nopoll_ctx_unref(pNopollCtx);
+//		    continue;
+//		} else {
+//			printf("Connect to zulolo nopoll server.\n");
+//			pNopollConn = nopoll_conn_new(pNopollCtx, "iot.zulolo.cn", "80", NULL, NULL, NULL, NULL);
+//			if (! nopoll_conn_is_ok(pNopollConn)){
+//			    // some error handling here
+//				ESP_DBG("Connect to websocket server failed.\n");
+//				vTaskDelay(5000/portTICK_RATE_MS);
+//				nopoll_ctx_unref(pNopollCtx);
+//				continue;
+//			} else {
+//				if (! nopoll_conn_wait_until_connection_ready(pNopollConn, 5)) {
+//				        // some error handling
+//					ESP_DBG("Wait websocket connect ready failed.\n");
+//					vTaskDelay(5000/portTICK_RATE_MS);
+//					nopoll_ctx_unref(pNopollCtx);
+//					continue;
+//				} else {
+//				    while(1){
+//				    	// Internet functions will be located here to connect to server and listening
+//				    	// if there is any command like relay status change, upgrade or timer update
+//				    	// even if you are not in local network with smart plug
+//				    	memset(cNopollUserData, 0 , sizeof(cNopollUserData));
+//				    	if (nopoll_conn_read(pNopollConn, cNopollUserData, sizeof(cNopollUserData) - 1, nopoll_true, 1000) < 0) {
+//				    		ESP_DBG("Nopoll read failed.\n");
+//				    		vTaskDelay(5000/portTICK_RATE_MS);
+//							nopoll_ctx_unref(pNopollCtx);
+//							continue;
+//				    	} else {
+//				    		printf("%s\n", cNopollUserData);
+//				    	}
+//				    }
+//				}
+//
+//			}
+//		}
+//	}
+//
+//	nopoll_ctx_unref(pNopollCtx);
     printf("user_esp_platform_maintainer task end.\n");
     vTaskDelete(NULL);
 
