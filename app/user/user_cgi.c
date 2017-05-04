@@ -16,7 +16,6 @@
 
 #include "lwip/mem.h"
 #include "lwip/sockets.h"
-#include "json/cJSON.h"
 
 #include "user_iot_version.h"
 
@@ -1707,16 +1706,6 @@ meter_status_get(cJSON *pcjson, const char* pname )
 
     return 0;
 }
-
-typedef int (* cgigetCallback)(cJSON *pcjson, const char* pchar);
-typedef int (* cgisetCallback)(const char* pchar);
-
-typedef struct {
-    const char *file;
-    const char *cmd;
-    cgigetCallback  get;
-    cgisetCallback  set;
-} EspCgiApiEnt;
 
 const EspCgiApiEnt espCgiApiNodes[]={
 

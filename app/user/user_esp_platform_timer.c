@@ -56,7 +56,7 @@ bool PLTF_isTimerRunning(void)
  * Parameters   : p1 , p2 ,splits[]
  * Returns      : the number of splits
 *******************************************************************************/
-uint16  
+uint8
 split(char *p1, char *p2, char *splits[])
 {
     int i = 0;
@@ -483,7 +483,7 @@ user_platform_timer_start(char *pbuffer)
 		tTimerParam.pSplitBuffer = (char *)zalloc(tTimerParam.unBufferSize);
 		memcpy(tTimerParam.pSplitBuffer, pstr_start + str_begin, str_end - str_begin);
 
-		uint16 count = split(tTimerParam.pSplitBuffer, ";", pTimerSplitsStrings);
+		uint8 count = split(tTimerParam.pSplitBuffer, ";", pTimerSplitsStrings);
 		user_platform_timer_bkup();
 		user_platform_timer_first_start(count);
 	}

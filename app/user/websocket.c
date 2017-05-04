@@ -14,14 +14,33 @@
 
 #include "smart_socket_global.h"
 #include "user_esp_platform.h"
+#include "user_cgi.h"
 
-#define local_host_name		"iot.zulolo.cn"
-#define local_host_port		"80"
+#define REMOTE_HOST_NAME			"iot.zulolo.cn"
+#define REMOTE_HOST_PORT			"80"
+#define WEBSOCKET_CMD_SEG_NUM		3
 
-nopoll_bool debug = nopoll_false;
-nopoll_bool show_critical_only = nopoll_false;
+LOCAL nopoll_bool debug = nopoll_false;
+LOCAL nopoll_bool show_critical_only = nopoll_false;
+extern SmartSocketParameter_t tSmartSocketParameter;
+extern const EspCgiApiEnt espCgiApiNodes[];
+LOCAL char *pWebsocketCmdSplitStrings[WEBSOCKET_CMD_SEG_NUM] = {0};
 
-void __report_critical (noPollCtx * ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data)
+LOCAL int numberof(char cChar, char* pStr)
+{
+	int nIndex;
+	int nNumber = 0;
+	int nStrLen = strlen(pStr);
+
+	for (nIndex = 0; nIndex < nStrLen; nIndex++){
+		if (cChar == pStr[nIndex]){
+			nNumber++;
+		}
+	}
+    return nNumber;
+}
+
+LOCAL void __report_critical (noPollCtx * ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data)
 {
         if (level == NOPOLL_LEVEL_CRITICAL) {
   	        printf ("CRITICAL: %s\n", log_msg);
@@ -29,7 +48,7 @@ void __report_critical (noPollCtx * ctx, noPollDebugLevel level, const char * lo
 	return;
 }
 
-noPollCtx * create_ctx (void) {
+LOCAL noPollCtx * create_ctx (void) {
 
 	/* create a context */
 	noPollCtx * ctx = nopoll_ctx_new ();
@@ -40,6 +59,40 @@ noPollCtx * create_ctx (void) {
 	if (show_critical_only)
 		nopoll_log_set_handler (ctx, __report_critical, NULL);
 	return ctx;
+}
+
+LOCAL int parseCommand(const EspCgiApiEnt* pEspCgiApiNodes, char* pBuffer)
+{
+	uint8 unIndex;
+	uint8 unCount;
+//	char cFile[32];
+//	char cCmd[32];
+//	char cJson[256];
+
+	// 'config/switch/{"Response":{"status":1}}'
+	if (numberof('/', pBuffer) != (WEBSOCKET_CMD_SEG_NUM - 1)){
+		printf("ERROR: Websocket received format error..\n");
+		return (-1);
+	}
+
+	for (unIndex = 0 ; unIndex < WEBSOCKET_CMD_SEG_NUM ; unIndex++) {
+		if (pWebsocketCmdSplitStrings[unIndex] != NULL) {
+			free(pWebsocketCmdSplitStrings[unIndex]);
+			pWebsocketCmdSplitStrings[unIndex] = NULL;
+		}
+	}
+
+	unCount = split(pBuffer, "/", pWebsocketCmdSplitStrings);
+
+	unIndex = 0;
+    while (pEspCgiApiNodes[unIndex].cmd!=NULL) {
+        if (strcmp(pEspCgiApiNodes[unIndex].file, pWebsocketCmdSplitStrings[0])==0 &&
+        		strcmp(pEspCgiApiNodes[unIndex].cmd, pWebsocketCmdSplitStrings[1])==0){
+        	break;
+        }
+        unIndex++;
+    }
+	return 0;
 }
 
 LOCAL void websocket_main()
@@ -56,41 +109,42 @@ LOCAL void websocket_main()
 	}
 
 	/* create context */
-	ctx = create_ctx ();
+	ctx = create_ctx();
 
 	/* check connections registered */
-	if (nopoll_ctx_conns (ctx) != 0) {
+	if (nopoll_ctx_conns(ctx) != 0) {
 		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
-		nopoll_cleanup_library ();
+		nopoll_cleanup_library();
 		vTaskDelete(NULL);
 		return ;
 	} /* end if */
 
-	nopoll_ctx_unref (ctx);
+	nopoll_ctx_unref(ctx);
 
 	/* reinit again */
-	ctx = create_ctx ();
+	ctx = create_ctx();
 
 	/* call to create a connection */
-	printf ("nopoll_conn_new\n");
-	conn = nopoll_conn_new (ctx, local_host_name, local_host_port, NULL, NULL, NULL, NULL);
+	printf("nopoll_conn_new\n");
+	conn = nopoll_conn_new (ctx, REMOTE_HOST_NAME, REMOTE_HOST_PORT, NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
-		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
-		nopoll_ctx_unref (ctx);
-		nopoll_cleanup_library ();
+		printf("ERROR: Expected to find proper client connection status, but found error..\n");
+		nopoll_ctx_unref(ctx);
+		nopoll_cleanup_library();
 		vTaskDelete(NULL);
 		return ;
 	}
 
 	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
 	printf ("Test 03: now reading reply..\n");
-	bytes_read = nopoll_conn_read (conn, buffer, 14, nopoll_true, 3000);
+	bytes_read = nopoll_conn_read(conn, buffer, sizeof(buffer), nopoll_true, 3000);
 
 	printf("Recv: %s\n", buffer);
+	parseCommand(espCgiApiNodes, buffer);
 
-	nopoll_conn_close (conn);
-	nopoll_ctx_unref (ctx);
-	nopoll_cleanup_library ();
+	nopoll_conn_close(conn);
+	nopoll_ctx_unref(ctx);
+	nopoll_cleanup_library();
 	vTaskDelete(NULL);
 	printf("delete the websocket_task\n");
 }

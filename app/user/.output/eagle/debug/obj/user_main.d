@@ -98,9 +98,9 @@
  ../libesphttpd/include/espfs.h ../libesphttpd/include/captdns.h \
  ../libesphttpd/include/httpd.h ../libesphttpd/include/cgiwifi.h \
  ../libesphttpd/include/httpd.h ../libesphttpd/include/httpdespfs.h \
- ../include/user_cgi.h ../libesphttpd/include/webpages-espfs.h \
- ../include/cs5463.h ../include/driver/gpio.h \
- ../include/smart_socket_global.h \
+ ../include/user_cgi.h /home/zulolo/ESP8266_RTOS_SDK/include/json/cJSON.h \
+ ../libesphttpd/include/webpages-espfs.h ../include/cs5463.h \
+ ../include/driver/gpio.h ../include/smart_socket_global.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/apps/sntp_time.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/timers.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sys.h \

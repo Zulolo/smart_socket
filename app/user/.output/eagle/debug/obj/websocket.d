@@ -113,4 +113,6 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/arch/sys_arch.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/semphr.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/freertos/queue.h \
- ../include/user_esp_platform.h
+ ../include/user_esp_platform.h ../include/user_cgi.h \
+ ../libesphttpd/include/httpd.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/json/cJSON.h

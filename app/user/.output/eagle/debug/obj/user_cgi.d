@@ -92,7 +92,6 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/ipv4/lwip/inet.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/ipv6/lwip/inet6.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/multi-threads/sockets_mt.h \
- /home/zulolo/ESP8266_RTOS_SDK/include/json/cJSON.h \
  ../include/user_iot_version.h ../include/user_config.h \
  ../include/user_esp_platform.h ../include/user_plug.h \
  ../include/driver/key.h ../include/driver/gpio.h \
@@ -103,5 +102,6 @@
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/lwip/sys.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/lwip/arch/sys_arch.h \
  /home/zulolo/ESP8266_RTOS_SDK/include/espressif/upgrade.h \
- ../include/user_cgi.h ../libesphttpd/include/httpd.h ../include/cs5463.h \
+ ../include/user_cgi.h ../libesphttpd/include/httpd.h \
+ /home/zulolo/ESP8266_RTOS_SDK/include/json/cJSON.h ../include/cs5463.h \
  ../include/smart_socket_global.h ../include/user_data.h
