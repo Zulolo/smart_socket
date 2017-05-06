@@ -855,6 +855,6 @@ void   httpdInit(HttpdBuiltInUrl *fixedUrls, int port)
     builtInUrls = fixedUrls;
     httpd_server_port = port;
     
-    xTaskCreate(httpserver_task, (const signed char *)"httpdserver", 1120, NULL, 4, NULL);
+    xTaskCreate(httpserver_task, (const signed char *)"httpdserver", 2048, NULL, 4, NULL);
 }
 

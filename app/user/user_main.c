@@ -61,6 +61,13 @@ unsigned int default_private_key_len = 0;
 #include "smart_config.h"
 #include "user_plug.h"
 
+
+//TODO 1. Use same coding standard (style)
+// 2. Check all return value including system API like zalloc and home made
+// 3. remove unused resources
+// 4. shrink some buffer size
+// 5. shrink flash size by put all same string like some error description into same const array
+
 #if HTTPD_SERVER
 HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp.nonet"},

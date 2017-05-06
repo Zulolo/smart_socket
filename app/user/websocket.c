@@ -18,13 +18,14 @@
 
 #define REMOTE_HOST_NAME			"iot.zulolo.cn"
 #define REMOTE_HOST_PORT			"80"
-#define WEBSOCKET_CMD_SEG_NUM		3
+#define WEBSOCKET_CMD_SEG_NUM		4
 
 LOCAL nopoll_bool debug = nopoll_false;
 LOCAL nopoll_bool show_critical_only = nopoll_false;
 extern SmartSocketParameter_t tSmartSocketParameter;
 extern const EspCgiApiEnt espCgiApiNodes[];
 LOCAL char *pWebsocketCmdSplitStrings[WEBSOCKET_CMD_SEG_NUM] = {0};
+const char cNopollSendTextError[] = "ERROR: Expected to find proper send operation..\n";
 
 LOCAL int numberof(char cChar, char* pStr)
 {
@@ -61,17 +62,29 @@ LOCAL noPollCtx * create_ctx (void) {
 	return ctx;
 }
 
-LOCAL int parseCommand(const EspCgiApiEnt* pEspCgiApiNodes, char* pBuffer)
+LOCAL int parseCommand(noPollConn* pNopollConn, const EspCgiApiEnt* pEspCgiApiNodes, char* pBuffer)
 {
 	uint8 unIndex;
 	uint8 unCount;
-//	char cFile[32];
-//	char cCmd[32];
-//	char cJson[256];
+	int nLen;
+	cJSON *pJson = NULL;
+	int nRslt = 0;
+	char* pJsonChar;
+	char *pbuf=(char*)zalloc(64);
 
-	// 'config/switch/{"Response":{"status":1}}'
+	if (NULL == pbuf){
+		printf("ERROR: No free memory for parseCommand..\n");
+		return (-1);
+	}
+	// 'post/config/switch/{"Response":{"status":1}}'
+	// 'get/config/switch/what_ever'
 	if (numberof('/', pBuffer) != (WEBSOCKET_CMD_SEG_NUM - 1)){
 		printf("ERROR: Websocket received format error..\n");
+		nLen = sprintf(pbuf, "{\n \"status\": \"404 Not Found\"\n }\n");
+		if (nopoll_conn_send_text(pNopollConn, pbuf, nLen) != nLen) {
+			printf(cNopollSendTextError);
+		}
+		free(pbuf);
 		return (-1);
 	}
 
@@ -86,13 +99,76 @@ LOCAL int parseCommand(const EspCgiApiEnt* pEspCgiApiNodes, char* pBuffer)
 
 	unIndex = 0;
     while (pEspCgiApiNodes[unIndex].cmd!=NULL) {
-        if (strcmp(pEspCgiApiNodes[unIndex].file, pWebsocketCmdSplitStrings[0])==0 &&
-        		strcmp(pEspCgiApiNodes[unIndex].cmd, pWebsocketCmdSplitStrings[1])==0){
+        if (strcmp(pEspCgiApiNodes[unIndex].file, pWebsocketCmdSplitStrings[1])==0 &&
+        		strcmp(pEspCgiApiNodes[unIndex].cmd, pWebsocketCmdSplitStrings[2])==0){
         	break;
         }
         unIndex++;
     }
-	return 0;
+
+    if (espCgiApiNodes[unIndex].cmd == NULL) {
+    	nLen = sprintf(pbuf, "{\n \"status\": \"404 Not Found\"\n }\n");
+    	if (nopoll_conn_send_text (pNopollConn, pbuf, nLen) != nLen) {
+    		printf(cNopollSendTextError);
+    	}
+    	free(pbuf);
+        return (-1);
+    } else {
+        if (strcmp("post", pWebsocketCmdSplitStrings[0])==0) {
+            //Found, req is using POST
+            //printf("post cmd found %s",espCgiApiNodes[i].cmd);
+            if(NULL != espCgiApiNodes[unIndex].set){
+                espCgiApiNodes[unIndex].set(pWebsocketCmdSplitStrings[3]);
+                nLen = sprintf(pbuf, "{\n \"status\": \"ok\"\n }\n");
+                if (nopoll_conn_send_text(pNopollConn, pbuf, nLen) != nLen) {
+					printf(cNopollSendTextError);
+				}
+                free(pbuf);
+				return 0;
+            } else {
+            	nLen = sprintf(pbuf, "{\n \"status\": \"400 Can not understand\"\n }\n");
+				if (nopoll_conn_send_text(pNopollConn, pbuf, nLen) != nLen) {
+					printf(cNopollSendTextError);
+				}
+				free(pbuf);
+				return (-1);
+            }
+        } else {
+            //Found, req is using GET
+//        	printf("GET command %s:%s found.\n", espCgiApiNodes[i].file, espCgiApiNodes[i].cmd);
+            //printf("get cmd found %s\n",espCgiApiNodes[i].cmd);
+            pJson=cJSON_CreateObject();
+            if(NULL == pJson) {
+                printf("ERROR! cJSON_CreateObject fail!\n");
+            	nLen = sprintf(pbuf, "{\n \"status\": \"500 Internal error\"\n }\n");
+				if (nopoll_conn_send_text(pNopollConn, pbuf, nLen) != nLen) {
+					printf(cNopollSendTextError);
+				}
+				free(pbuf);
+				return (-1);
+            } else {
+                nRslt=espCgiApiNodes[unIndex].get(pJson, pWebsocketCmdSplitStrings[3]);
+                if(nRslt == 0){
+                    pJsonChar = cJSON_Print(pJson);
+                    if (NULL == pJsonChar){
+                    	printf("ERROR! cJSON_Print fail!\n");
+                    	cJSON_Delete(pJson);
+                        free(pbuf);
+        				return (-1);
+                    } else {
+                        nLen = strlen(pJsonChar);
+                        if (nopoll_conn_send_text(pNopollConn, pJsonChar, nLen) != nLen) {
+        					printf(cNopollSendTextError);
+        				}
+                        cJSON_Delete(pJson);
+                        free(pJsonChar);
+                        free(pbuf);
+        				return 0;
+                    }
+                }
+            }
+        }
+    }
 }
 
 LOCAL void websocket_main()
@@ -140,7 +216,7 @@ LOCAL void websocket_main()
 	bytes_read = nopoll_conn_read(conn, buffer, sizeof(buffer), nopoll_true, 3000);
 
 	printf("Recv: %s\n", buffer);
-	parseCommand(espCgiApiNodes, buffer);
+	parseCommand(conn, espCgiApiNodes, buffer);
 
 	nopoll_conn_close(conn);
 	nopoll_ctx_unref(ctx);
