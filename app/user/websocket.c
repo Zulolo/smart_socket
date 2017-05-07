@@ -178,8 +178,6 @@ LOCAL void websocket_main()
 	char         buffer[256];
 	int          bytes_read;
 
-	memset (buffer, 0, sizeof(buffer));
-
 	while(user_esp_platform_get_device_connect_status() != DEVICE_GOT_IP){
 		vTaskDelay(2000 / portTICK_RATE_MS);
 	}
@@ -214,8 +212,12 @@ LOCAL void websocket_main()
 	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
 	printf ("Now reading reply..\n");
 	while(1){
-		bytes_read = nopoll_conn_read(conn, buffer, sizeof(buffer), nopoll_true, 3000);
-
+		memset(buffer, 0, sizeof(buffer));
+		bytes_read = nopoll_conn_read(conn, buffer, sizeof(buffer), nopoll_true, 2000);
+		if (((-1) == bytes_read) || (sizeof(buffer) == bytes_read)) {
+			// -1 means read error, sizeof(buffer) means flushing the buffer
+			continue;
+		}
 		printf("Recv: %s\n", buffer);
 		parseCommand(conn, espCgiApiNodes, buffer);
 	}
