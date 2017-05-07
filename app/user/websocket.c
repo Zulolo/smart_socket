@@ -22,7 +22,7 @@
 
 LOCAL nopoll_bool debug = nopoll_false;
 LOCAL nopoll_bool show_critical_only = nopoll_false;
-extern SmartSocketParameter_t tSmartSocketParameter;
+//extern SmartSocketParameter_t tSmartSocketParameter;
 extern const EspCgiApiEnt espCgiApiNodes[];
 LOCAL char *pWebsocketCmdSplitStrings[WEBSOCKET_CMD_SEG_NUM] = {0};
 const char cNopollSendTextError[] = "ERROR: Expected to find proper send operation..\n";
@@ -212,11 +212,13 @@ LOCAL void websocket_main()
 	}
 
 	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
-	printf ("Test 03: now reading reply..\n");
-	bytes_read = nopoll_conn_read(conn, buffer, sizeof(buffer), nopoll_true, 3000);
+	printf ("Now reading reply..\n");
+	while(1){
+		bytes_read = nopoll_conn_read(conn, buffer, sizeof(buffer), nopoll_true, 3000);
 
-	printf("Recv: %s\n", buffer);
-	parseCommand(conn, espCgiApiNodes, buffer);
+		printf("Recv: %s\n", buffer);
+		parseCommand(conn, espCgiApiNodes, buffer);
+	}
 
 	nopoll_conn_close(conn);
 	nopoll_ctx_unref(ctx);
